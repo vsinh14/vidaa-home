@@ -1,0 +1,4 @@
+# vendor code and built artifacts never enter the repo
+firmware/stock-app.js
+firmware/candidate-app.js
+firmware/*.img
