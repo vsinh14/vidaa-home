@@ -13,7 +13,7 @@
   kit.renderOverlay = function (P, vm) {
     var out = [];
     out.push(P.box(0, 0, 1920, 1080, { backgroundColor: "rgba(0,0,0,0.94)" }));
-    out = out.concat(P.pxText("APPS", 6, kit.CYAN, C.MARGIN, 48));
+    out = out.concat(P.pxText("APPS", 6, kit.INK, C.MARGIN, C.TOP));
     var list = vm.overlayList();
     out.push(P.mono(C.RIGHT - 240, 60, 200, 18, list.length + " APPS", kit.DIM, "right"));
 
@@ -37,14 +37,15 @@
         kit.shortName(app.appName).toUpperCase().slice(0, 14),
         focused ? kit.INK : kit.DIM, "center"));
       if (spans && j === spansHead(spans, j)) {
+        // Group labels are secondary chrome: grey tier, not a colour.
         out = out.concat(P.pxText(String(spansLabel(spans, j)).toUpperCase().slice(0, 16),
-          3, kit.CYAN, x, Math.max(120, y - 20)));
+          3, kit.DIM, x, Math.max(120, y - 20)));
       }
     }
     out.push(P.mono(C.MARGIN, 1006, 600, 16, "OK LAUNCH   BACK CLOSE   RED TV SETTINGS", kit.DIM));
     if (pages > 1) {
       out.push(P.mono(C.RIGHT - 240, 1006, 200, 16,
-        "PAGE " + (page + 1) + "/" + pages, kit.CYAN, "right"));
+        "PAGE " + (page + 1) + "/" + pages, kit.DIM, "right"));
     }
     return out;
   };
@@ -171,14 +172,24 @@
     return out;
   };
 
+  // The toast BAR is off: on this page it narrates what the screen
+  // already shows ("edit mode..." while the rings are red, "PIN X"
+  // under a ring walking to it) — a bar with no data. The whole
+  // plumbing stays wired: model fields, showToast, the expiry tick,
+  // and every call site. Flip the switch to bring the bar back.
+  kit.TOAST_ON = false;
   kit.renderToast = function (P, vm) {
-    if (!vm.toast) return [];
+    if (!kit.TOAST_ON || !vm.toast) return [];
     var w = Math.min(1400, 64 + String(vm.toast).length * 13);
     var x = (1920 - w) / 2;
-    return [P.box(x, 912, w, 52, {
+    // The toast floats just above the rail — the baseline parked it at
+    // y 912 back when that strip was empty page, and the rail now owns
+    // that lane; a toast there punched a black bar across the tiles.
+    var y = C.RAIL_Y - 60;
+    return [P.box(x, y, w, 52, {
       backgroundColor: "#000000",
       border: "2px solid " + kit.AMBER
-    }, [P.mono(x + 16, 914, w - 32, 22, vm.toast, kit.AMBER, "center")])];
+    }, [P.mono(x + 16, y + 2, w - 32, 22, vm.toast, kit.AMBER, "center")])];
   };
 
   kit.renderHud = function (P, vm) {
@@ -186,7 +197,9 @@
     var secs = Math.max(0, Math.ceil((vm.autoSwitchAt - Date.now()) / 1000));
     var hud = ("AUTO " + String(vm.autoSwitchName || "").toUpperCase().slice(0, 12) +
       " " + secs + "S");
-    return P.pxText(hud, 4, kit.AMBER, (1920 - P.textWidth(hud, 4)) / 2, 936);
+    // The countdown rides the superblock's top band — the sliver
+    // between band edge and rail — so it never sits on the tiles.
+    return P.pxText(hud, 4, kit.INK, (1920 - P.textWidth(hud, 4)) / 2, C.SUPER_Y);
   };
 
   kit.renderAll = function (vm, h) {

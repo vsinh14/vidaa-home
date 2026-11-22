@@ -69,6 +69,10 @@
           if (vm.idleAt && !vm.idle && nowMs >= vm.idleAt) {
             vm.enterIdle();
           }
+          // The rail's lid: 30 s without a key closes the row on the
+          // home page. Extracted to the model so the test can pull the
+          // clock without waiting on this interval.
+          vm.railLidTick(nowMs);
           if (vm.autoSwitchAt && nowMs >= vm.autoSwitchAt) {
             vm.triggerAutoSwitch();
           }
@@ -130,7 +134,7 @@
         this.overlay = false;
         this.closeSettings();
         this.fav = 0;
-        this.inputSel = this.smartIndex();
+        this.applySmartFocus();
         this.clamp();
       },
       run: function (action) {
@@ -167,7 +171,7 @@
         // A launch or switch cancels the idle screen on every path.
         this.cancelIdle();
         if (this.page === "inputs") {
-          var input = this.sources[this.inputSel];
+          var input = this.inputFocus();
           if (!input) return;
           if (this.prefs) this.prefs.lastUsed = input.sourceId;
           kit.writePref("alvidaa_last_used", input.sourceId);

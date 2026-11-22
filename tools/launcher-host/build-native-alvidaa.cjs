@@ -15,7 +15,7 @@ const wallpaper = require('./wallpaper.cjs');
 // in numeric order onto a shared namespace (00-kit bootstraps it; the
 // bundle boundary is where modularity ends and the single-file contract
 // for the TV begins — the WebView gets one script, the repo gets ten).
-const PARTS = [
+const BASE_PARTS = [
   'native-platform.js',
   'native/00-kit.js',
   'native/10-glyphs.js',
@@ -29,6 +29,14 @@ const PARTS = [
   'native/80-component.js',
   'native-entry.js'
 ];
+// Diagnostic lane: DSH_DEBUG=1 sandwiches the same parts between a banner
+// prelude and a marker tail, and ships them unminified so banners carry
+// our identifiers. It is a different variant on purpose — never confirm a
+// debug build; it exists to make the silent vendor fallback readable.
+const DEBUG = process.env.DSH_DEBUG === '1';
+const PARTS = DEBUG
+  ? ['debug-prelude.js'].concat(BASE_PARTS, ['debug-tail.js'])
+  : BASE_PARTS;
 const MARKER = 'ALVIDAA_NATIVE_HOME_V1';
 
 // Production pass for our parts: the vendor half of the bundle is already
@@ -76,13 +84,14 @@ function build(stockFile, output, expect, options) {
   // Each part is already a closed IIFE, so minified parts concatenate with
   // the same '\n;\n' joins as the sources; mangled locals cannot collide
   // across parts because none leak out of their closure.
-  const esbuild = localEsbuild();
+  const esbuild = DEBUG ? null : localEsbuild();
   const parts = PARTS.map(file => {
     const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
     return esbuild ? esbuild.transformSync(source,
       { minify: true, target: 'es2017', legalComments: 'none' }).code : source;
   });
-  const candidate = '/* ' + MARKER + '\n * variant: native/ modules (page frame)\n */\n' + art + '\n' +
+  const candidate = '/* ' + MARKER + '\n * variant: native/ modules (page frame' +
+    (DEBUG ? ' DEBUG' : '') + ')\n */\n' + art + '\n' +
     stock + '\n;\n' + parts.join('\n;\n');
   new vm.Script(candidate, { filename: 'native-candidate.js' });
   if (output) {
@@ -103,7 +112,8 @@ if (require.main === module) {
     'Usage: build-native-alvidaa.cjs private-stock.js private-output.js <expected-sha256>');
   const candidate = build(stock, output, expect);
   console.log('Built alvidaa native candidate' +
-    (localEsbuild() ? ' (parts minified)' : ' (parts unminified: esbuild unavailable)') +
+    (DEBUG ? ' (DEBUG variant: parts unminified, page banners active)'
+      : localEsbuild() ? ' (parts minified)' : ' (parts unminified: esbuild unavailable)') +
     ': ' + Buffer.byteLength(candidate) + ' bytes; sha256 ' + hash(candidate));
 }
 module.exports = { build, PARTS, MARKER };

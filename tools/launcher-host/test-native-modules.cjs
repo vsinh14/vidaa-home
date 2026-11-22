@@ -59,7 +59,8 @@ const payload = {
   sources: [
     { sourceId: 1, name: 'HDMI1', deviceName: 'Fire TV Stick', is_signal: 1 },
     { sourceId: 2, name: 'HDMI2', deviceName: null, has_signal: 0 },
-    { sourceId: 5, name: 'AV', deviceName: 'Roku', is_signal: 0 }
+    { sourceId: 5, name: 'AV', deviceName: 'Roku', is_signal: 0 },
+    { sourceId: 7, name: 'TV', deviceName: null, has_signal: 1 }
   ],
   errors: []
 };
@@ -92,8 +93,31 @@ const v = Object.assign({}, opts.data(), opts.methods);
 // Boot: the fake platform delivers the payload synchronously from start().
 opts.mounted.call(v);
 assert.equal(v.apps.length, 4, 'vidaa-home filtered out');
-assert.equal(v.sources.length, 3);
+assert.equal(v.sources.length, 4);
 assert.equal(v.page, 'home');
+
+// The block's color truth is device presence, not naming: `deviceName`
+// is filled only by a real device; the other name fields label every
+// port and must never light a block up.
+const kitK = sandbox.AlvidaaNativeKit;
+assert.equal(kitK.deviceOf({ name: 'HDMI3', deviceName: 'JBL' }), 'JBL');
+assert.equal(kitK.deviceOf({ name: 'HDMI3', displayname2: 'SCREEN' }), '', 'a label is no device');
+assert.equal(kitK.deviceOf({ name: 'HDMI3', rename: 'HOME1' }), '', 'a rename is no device');
+assert.equal(kitK.deviceOf({ name: 'HDMI3', deviceName: '  ' }), '', 'whitespace is no device');
+assert.equal(kitK.deviceOf({ name: 'HDMI3' }), '', 'bare port is no device');
+// Rail split truth: the vendor's own label classifies; renames never move.
+assert.equal(kitK.isPort({ name: 'HDMI1' }), true, 'HDMI is a port');
+assert.equal(kitK.isPort({ name: 'AV' }), true, 'AV is a port');
+assert.equal(kitK.isPort({ name: 'COMPONENT' }), true, 'component is a port');
+assert.equal(kitK.isPort({ name: 'TV' }), false, 'the tuner rides the data row');
+assert.equal(kitK.isPort({ name: 'CHROMECAST' }), false, 'cast rides the data row');
+assert.equal(kitK.isPort({ name: 'SC' }), true, 'SC is the SCART-era connector');
+assert.equal(kitK.isPort({ name: 'SC1' }), true, 'SC with a number is a port');
+assert.equal(kitK.isPort({ name: 'SCREEN SHARE' }), false,
+  'screen share starts with SC but is not a connector (panel trap)');
+assert.equal(kitK.isPort({ name: 'SCREEN' }), false, 'bare SCREEN is data, not SC');
+assert.equal(v.inputRows()[1].length, 3, 'three ports on the bottom row');
+assert.equal(v.inputRows()[0].length, 1, 'the tuner is the one data row tile');
 
 // Pin three favorites through the settings actions.
 v.togglePin(v.apps[0]);
@@ -114,22 +138,208 @@ assert.deepEqual(calls[calls.length - 1], ['launch', 'yt']);
 // RIGHT twice walks 102 -> 103 -> P110.
 v.fav = 1; v.handleKey(KEYMAP.RIGHT); assert.equal(v.fav, 2);
 v.handleKey(KEYMAP.RIGHT); assert.equal(v.page, 'inputs');
-// P110: smart focus is the live port; BACK returns to P100.
+// P110: smart focus lands on the first port reporting a device
+// (HDMI1); the fresh visit enters folded on the ports lane.
 assert.equal(v.inputSel, 0);
-v.handleKey(KEYMAP.BACK); assert.equal(v.page, 'home');
-// Digit on P110 selects and switches.
-v.handleKey(KEYMAP.DOWN); assert.equal(v.page, 'inputs');
-v.handleKey(KEYMAP.NUM_3);
+assert.equal(v.inputRow, 1);
+assert.equal(v.inputsExpanded, false, 'fresh Inputs enters folded');
+// BACK on the open rail folds it IN PLACE: the page stays, the lid
+// drops. The next BACK, in nav mode, is the page home.
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.page, 'inputs', 'BACK folds the rail, it does not turn the page');
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.page, 'home');
+// Re-entry (nav RIGHT with the lid down). Digits are dead on Inputs:
+// folded, the digit just lifts the rail (blind rule, it does not
+// punch through); open, nothing at all happens — the vendor keeps
+// its channel keys.
+v.handleKey(KEYMAP.RIGHT); assert.equal(v.page, 'inputs');
+const preDigits = calls.length;
+assert.equal(v.handleKey(KEYMAP.NUM_3), true, 'folded: the digit lifts, nothing else');
+assert.equal(v.railOpen, true);
+assert.equal(calls.length, preDigits, 'no switch through a closed lid');
+assert.equal(v.handleKey(KEYMAP.NUM_3), false, 'open: digits are dead on Inputs');
+// Walk to AV and launch.
+v.handleKey(KEYMAP.RIGHT); v.handleKey(KEYMAP.RIGHT);
+assert.equal(v.inputSel, 2, 'walked to AV, the last port');
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
+assert.deepEqual(calls[calls.length - 1], ['source', 5]);
+assert.equal(JSON.parse(store.alvidaa_last_used), 5, 'last-used written');
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
 assert.deepEqual(calls[calls.length - 1], ['source', 5]);
 assert.equal(JSON.parse(store.alvidaa_last_used), 5, 'last-used written');
 
-// RED enters edit mode; OK removes the focused block.
+// RED enters edit mode; OK removes the focused block. (First BACK
+// folds the open rail in place, the second is the page home.)
+v.handleKey(KEYMAP.BACK);
 v.handleKey(KEYMAP.BACK); assert.equal(v.page, 'home');
 v.fav = 0;
 v.handleKey(KEYMAP.RED); assert.equal(v.edit, true);
 v.handleKey(KEYMAP.ENTER);
 assert.equal(v.favoriteItems().length, 2);
 v.handleKey(KEYMAP.RED); assert.equal(v.edit, false);
+// GREEN is unbound (OK launches, the remote has it) and UP at the P100
+// root stays the vendor's. DOWN is the rail's lid: it covers the row,
+// and the next key's whole job is to lift it back.
+assert.equal(v.handleKey(KEYMAP.GREEN), false);
+assert.equal(v.handleKey(KEYMAP.UP), false);
+assert.equal(v.railOpen, true);
+assert.equal(v.handleKey(KEYMAP.DOWN), true);
+assert.equal(v.railOpen, false);
+// Collapsed is navigation mode: RIGHT turns the page, it does not lift.
+v.fav = 0;
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.page, 'inputs', 'collapsed RIGHT turns the page');
+assert.equal(v.railOpen, false, 'navigation keeps the lid down');
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.page, 'home', 'collapsed LEFT turns back');
+assert.equal(v.railOpen, false, 'the lid is shared across pages');
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.page, 'inputs');
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.page, 'home');
+// Keys that want the rail lift the lid first — the lift is the whole
+// action: nothing selects and nothing launches behind a closed lid.
+const blindBefore = calls.length;
+assert.equal(v.handleKey(KEYMAP.NUM_3), true);
+assert.equal(v.railOpen, true, 'a digit lifts the lid, it does not punch through');
+assert.equal(calls.length, blindBefore, 'no switch through a closed lid');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // cover again
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
+assert.equal(v.railOpen, true, 'OK lifts the lid, it does not fire blind');
+assert.equal(calls.length, blindBefore, 'the lift is not a launch either');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // cover again
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);           // nav, stays closed
+assert.equal(v.page, 'inputs');
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.railOpen, true, 'RIGHT with no next page lifts — the user is lost');
+assert.equal(v.page, 'inputs', 'and the page stays put');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // cover again on Inputs
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.BACK), true);            // BACK still navigates closed
+assert.equal(v.page, 'home', 'BACK turns back with the lid down');
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);           // nav in again
+assert.equal(v.page, 'inputs');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // lift, no page turn
+assert.equal(v.railOpen, true);
+assert.equal(v.page, 'inputs', 'the lid never turns pages by itself');
+// Open-state BACK on Inputs is an unwinder, not a page turn: it folds
+// the rail in place; the next BACK, in nav mode, is the page home.
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.page, 'inputs', 'BACK folds the rail, Inputs stays put');
+assert.equal(v.railOpen, false);
+assert.equal(v.inputsExpanded, false);
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.page, 'home', 'the nav-mode BACK pages home');
+assert.equal(v.railOpen, false, 'page nav keeps the lid down');
+// 30 s of silence closes it (the tick is the heartbeat's sample).
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // lift on Home first
+assert.equal(v.railOpen, true);
+v.lastAct = Date.now() - 61000;
+v.railLidTick(Date.now());
+assert.equal(v.railOpen, false, 'silence closes the lid');
+assert.equal(v.handleKey(KEYMAP.UP), true, 'UP lifts the rail too: only nav keys do not');
+assert.equal(v.railOpen, true);
+// Open-state: RIGHT past the rail end is how the open rail turns to P110.
+v.fav = Math.max(0, v.favoriteItems().length - 1);
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.page, 'inputs');
+assert.equal(v.railOpen, true, 'page nav keeps the rail open');
+assert.equal(v.inputsExpanded, false, 'the fresh visit enters folded');
+// Two-stage unwind: fold in place, then nav home.
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.page, 'inputs');
+assert.equal(v.railOpen, false);
+v.handleKey(KEYMAP.BACK); assert.equal(v.page, 'home');
+
+// Inputs split rail, open walk. Fixture ports: HDMI1, HDMI2, AV;
+// data row: the tuner (one tile). Each row pages itself; the walk is
+// continuous — data first, ports below.
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);           // nav in, lid down
+assert.equal(v.page, 'inputs');
+v.handleKey(KEYMAP.ENTER);                               // blind rule lifts
+assert.equal(v.railOpen, true, 'the lid opens before anything walks');
+assert.equal(v.inputsExpanded, false, 'fresh visit enters folded');
+assert.equal(v.handleKey(KEYMAP.UP), true, 'UP raises the data row');
+assert.equal(v.inputsExpanded, true);
+assert.equal(v.inputRow, 1, 'expanding adds a lane, focus stays on the ports');
+assert.equal(v.handleKey(KEYMAP.UP), true, 'UP again steps up the lane');
+assert.equal(v.inputRow, 0);
+assert.equal(v.handleKey(KEYMAP.UP), false, 'the data row is the top of the world');
+// DOWN from the top row folds AND lands focus on the rail below.
+assert.equal(v.handleKey(KEYMAP.DOWN), true);
+assert.equal(v.inputsExpanded, false, 'the data row folded away');
+assert.equal(v.inputRow, 1, 'focus descended to the ports row');
+assert.equal(v.inputSel, 0, 'same column, clamped');
+assert.equal(v.railOpen, true, 'folding one row leaves the rail open');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // folded: DOWN is the lid
+assert.equal(v.railOpen, false);
+// The continuous walk, backwards from the ports row start:
+assert.equal(v.handleKey(KEYMAP.ENTER), true);           // lift again
+assert.equal(v.handleKey(KEYMAP.UP), true);              // expand again
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.inputRow, 0, 'stepped into the far end of the data row');
+assert.equal(v.inputDataSel, 0);
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.page, 'home', 'the walk start faces Home, lid or not');
+assert.equal(v.railOpen, true, 'page nav keeps the rail open');
+// And forwards: the data row end hands over to the ports row start.
+v.fav = Math.max(0, v.favoriteItems().length - 1);
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);           // open nav back in
+assert.equal(v.page, 'inputs');
+assert.equal(v.inputsExpanded, false, 'the fresh visit enters folded again');
+v.handleKey(KEYMAP.UP);                                  // expand
+v.inputRow = 0;
+v.inputDataSel = 0;                                      // only data tile: also its end
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.inputRow, 1);
+assert.equal(v.inputSel, 0, 'the data end hands over to the ports start');
+// Walk to the rail end and clamp there — no wrap, the walk just ends.
+v.handleKey(KEYMAP.RIGHT); v.handleKey(KEYMAP.RIGHT);
+assert.equal(v.inputSel, 2, 'the rail ends at its last port');
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);
+assert.equal(v.inputSel, 2, 'past the end the rail simply ends');
+// BACK anywhere on the open rail folds both rows to nav mode in place.
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.inputsExpanded, false, 'BACK folds both rows at once');
+assert.equal(v.railOpen, false, 'and drops the lid');
+assert.equal(v.page, 'inputs', 'the page stays put');
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.page, 'home', 'then the nav-mode BACK pages home');
+// Folded, the ports row start is the walk start: LEFT faces Home.
+assert.equal(v.handleKey(KEYMAP.RIGHT), true);           // nav in, lid down
+assert.equal(v.page, 'inputs');
+v.handleKey(KEYMAP.ENTER);                               // lift
+assert.equal(v.railOpen, true);
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.page, 'home', 'folded rail start faces Home');
+assert.equal(v.railOpen, true);
+// Nav keys at a page boundary lift: a lost press shows the rail.
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // cover
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.LEFT), true);
+assert.equal(v.railOpen, true, 'LEFT with no previous page lifts — the user is lost');
+assert.equal(v.page, 'home', 'and the page stays put');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);            // cover again
+assert.equal(v.railOpen, false);
+assert.equal(v.handleKey(KEYMAP.BACK), false, 'BACK at Home is the vendor exit, lid or not');
+// Foot legends act in both modes: the grid goes through the lid,
+// RED lifts the rail and arms edit in one press.
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.overlay, true, 'YELLOW opens the grid straight through a closed lid');
+assert.equal(v.railOpen, false, 'the lid stays down under the grid');
+assert.equal(v.handleKey(KEYMAP.BACK), true);
+assert.equal(v.overlay, false, 'BACK closes the grid');
+assert.equal(v.railOpen, false, 'and hands back navigation mode');
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.railOpen, true, 'RED brings the rail back with edit on');
+assert.equal(v.edit, true);
+assert.equal(v.handleKey(KEYMAP.RED), true);   // open-state: RED exits edit
+assert.equal(v.edit, false);
 
 // Digit 5 hits an empty slot: consumed with a toast, nothing launched.
 const before = calls.length;

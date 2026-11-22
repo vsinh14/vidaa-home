@@ -19,6 +19,18 @@
         // The page frame: "home" (P100) and "inputs" (P110). edit is the
         // rail's remove-mode entered with the RED key.
         page: "home", fav: 0, edit: false, inputSel: 0,
+        // Inputs split rail (owner design): the ports row is always the
+        // bottom row (inputSel indexes it); the data row rides above and
+        // only exists while inputsExpanded is set (inputDataSel indexes
+        // it). inputRow is the focused lane: 1 = ports, 0 = data. A
+        // fresh page always enters folded, focused on the ports row, so
+        // entry focus is always the first port tile.
+        inputDataSel: 0, inputRow: 1, inputsExpanded: false,
+        // The rail's lid: DOWN covers the row, 30 s of silence covers it,
+        // any key lifts it again. The foot and header never hide. The
+        // clock arms at boot, not at zero — a fresh home never starts
+        // the window already expired.
+        railOpen: true, lastAct: Date.now(),
         overlay: false, overlayIndex: 0,
         settings: false, settingsPage: "root", settingsIndex: 0,
         nameDraft: "", nameIndex: 0, nameSourceId: null,
@@ -128,22 +140,30 @@
         }
         return label;
       },
-      smartIndex: function () {
-        // Smart focus: the first live source, else the last-used port.
-        var live = this.sources.filter(kit.signalOf);
-        if (live.length) {
-          for (var i = 0; i < this.sources.length; i++) {
-            if (this.sources[i] === live[0]) return i;
-          }
-        }
+      // Pre-seed Inputs focus for the next visit (routeFocus). The
+      // split rail enters folded, so the seed stays on the ports row:
+      // the last-used port, else the first port with a device
+      // reporting (deviceOf — the same truth that colors blocks),
+      // else the first port.
+      applySmartFocus: function () {
+        var rows = this.inputRows();
+        var ports = rows[1];
         var last = this.prefs && this.prefs.lastUsed;
-        if (last != null && this.sources.length) {
-          var lastStr = String(last);
-          for (var j = 0; j < this.sources.length; j++) {
-            if (String(this.sources[j].sourceId) === lastStr) return j;
+        var lastStr = last != null ? String(last) : null;
+        var i;
+        for (i = 0; i < ports.length; i++) {
+          if (lastStr && String(ports[i].sourceId) === lastStr) {
+            this.inputRow = 1; this.inputSel = i; this.inputsExpanded = false;
+            return;
           }
         }
-        return 0;
+        for (i = 0; i < ports.length; i++) {
+          if (kit.deviceOf(ports[i]) !== "") {
+            this.inputRow = 1; this.inputSel = i; this.inputsExpanded = false;
+            return;
+          }
+        }
+        this.inputRow = 1; this.inputSel = 0; this.inputsExpanded = false;
       },
       // Rail on P100: the pinned favorites in pin order, capped at FAV_MAX.
       // The block colour and its ink are decided once per list build, so
@@ -252,11 +272,62 @@
         if (Array.isArray(hidden) && hidden.length) return !kit.inAppList(hidden, app);
         return true;
       },
+      // The split rail's truth: [data row, ports row], classified by
+      // the vendor's own label (kit.isPort), never by renames.
+      inputRows: function () {
+        var data = [], ports = [];
+        for (var i = 0; i < this.sources.length; i++) {
+          if (kit.isPort(this.sources[i])) ports.push(this.sources[i]);
+          else data.push(this.sources[i]);
+        }
+        return [data, ports];
+      },
+      inputFocus: function () {
+        var rows = this.inputRows();
+        if (this.inputRow === 0) return rows[0][this.inputDataSel] || null;
+        return rows[1][this.inputSel] || null;
+      },
+      // Entering Inputs is always the same opening: folded, ports lane,
+      // first tile. No mode leaks in from the previous visit.
+      enterInputs: function () {
+        this.page = "inputs";
+        this.inputsExpanded = false;
+        this.inputRow = 1;
+        this.inputSel = 0;
+        this.inputDataSel = 0;
+        this.clamp();
+      },
+      // One fold step: the data row vanishes; focus that sat in it
+      // descends to the same column of the rail below (clamped).
+      foldRows: function () {
+        this.inputsExpanded = false;
+        this.dropFocusToPorts();
+      },
+      dropFocusToPorts: function () {
+        if (this.inputRow === 0) {
+          this.inputRow = 1;
+          this.inputSel = this.inputDataSel;
+        }
+        this.clamp();
+      },
+      // The lid covers BOTH rows: closing it folds the data row and
+      // descends focus to the rail below. No half-open states exist.
+      closeLid: function () {
+        this.railOpen = false;
+        this.foldRows();
+      },
       clamp: function () {
         var favLen = this.favoriteItems().length;
         this.fav = favLen > 0 ? Math.max(0, Math.min(this.fav, favLen - 1)) : 0;
-        var srcLen = this.sources.length;
-        this.inputSel = srcLen > 0 ? Math.max(0, Math.min(this.inputSel, srcLen - 1)) : 0;
+        var rows = this.inputRows();
+        var dLen = rows[0].length, pLen = rows[1].length;
+        if (dLen === 0) {
+          // No data row exists to show or focus.
+          this.inputsExpanded = false;
+          if (this.inputRow === 0) this.inputRow = 1;
+        }
+        this.inputDataSel = dLen > 0 ? Math.max(0, Math.min(this.inputDataSel, dLen - 1)) : 0;
+        this.inputSel = pLen > 0 ? Math.max(0, Math.min(this.inputSel, pLen - 1)) : 0;
         var overlayLen = this.overlayList().length;
         this.overlayIndex = overlayLen > 0 ? Math.max(0, Math.min(this.overlayIndex, overlayLen - 1)) : 0;
         if (this.settings) {

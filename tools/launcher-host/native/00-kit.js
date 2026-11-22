@@ -28,28 +28,56 @@
   kit.RECENT_MAX = 40;
   kit.IDLE_STEPS = [0, 1, 5, 15];
 
-  kit.C = {
-    MARGIN: 128, RIGHT: 1792,
-    BAND_Y: 232, BAND_H: 400,             // the wallpaper band
-    RAIL_X: 128, RAIL_Y: 824,
-    TILE_W: 208, TILE_H: 144, RAIL_GAP: 16, RAIL_PAGE: 6,
-    FOOT_Y: 1004,
-    INP_X: 128, INP_Y: 400, INP_GAPX: 16, INP_GAPY: 20, INP_COLS: 6, INP_PAGE: 12,
-    OX: 220, OY: 180,                      // overlay grid origin
-    OCW: 196, OCH: 110, OGAPX: 18, OGAPY: 24, OCOLS: 7, OPAGE: 35,
-    SPX: 360, SPY: 90, SPW: 1200, SPH: 900 // settings panel
-  };
+  kit.C = (function () {
+    // One padding value owns the page borders, and the vertical stack
+    // flows from it: every zone is content height + PAD, and the
+    // wallpaper band absorbs whatever is left. Nothing black is a fixed
+    // bar — the black *is* the content zones. First pass: PAD 24.
+    var PAD = 24;
+    // Glyph blocks are 7 * unit tall: clock u13 = 91, date/foot u4 = 28.
+    var CLOCK_H = 91, DATE_H = 28, FOOT_H = 28, TILE_H = 144;
+    var CLOCK_Y = PAD;
+    var DATE_Y = CLOCK_Y + CLOCK_H + PAD;
+    var FOOT_Y = 1080 - PAD - FOOT_H;
+    var RAIL_Y = FOOT_Y - PAD - TILE_H;
+    // Inputs split rail: the data row rides ABOVE the ports row, one
+    // RAIL_GAP apart. Only the Inputs page ever raises the second row.
+    var RAIL2_Y = RAIL_Y - 12 - TILE_H; // 12 = RAIL_GAP, declared below
+    // Superblock: starts one PAD (plus the 4px ring margin) above the
+    // rail and runs to the bottom edge — rail and foot share one black.
+    var SUPER_Y = RAIL_Y - 4 - PAD;
+    // Expanded Inputs (two rows): the block grows to cover both.
+    var SUPER_EXP_Y = RAIL2_Y - 4 - PAD;
+    // Lid closed: the superblock keeps only the foot, one PAD tall band.
+    var SUPER_FOOT_Y = FOOT_Y - PAD;
+    var BAND_Y = DATE_Y + DATE_H + PAD;   // header scrim zone height
+    return {
+      PAD: PAD,
+      MARGIN: PAD, RIGHT: 1920 - PAD,
+      TOP: PAD, BOTTOM: 1080 - PAD,
+      CLOCK_Y: CLOCK_Y, DATE_Y: DATE_Y,
+      BAND_Y: BAND_Y, SUPER_Y: SUPER_Y,    // chrome zones; the art is full-page
+      SUPER_FOOT_Y: SUPER_FOOT_Y,          // superblock with the lid closed
+      RAIL_X: PAD, RAIL_Y: RAIL_Y, RAIL2_Y: RAIL2_Y, // data row above ports
+      SUPER_EXP_Y: SUPER_EXP_Y,        // superblock, expanded Inputs
+      TILE_W: 302, TILE_H: TILE_H, RAIL_GAP: 12, RAIL_PAGE: 6,
+      FOOT_Y: FOOT_Y,
+      OX: 220, OY: 180,                      // overlay grid origin (modal surface)
+      OCW: 196, OCH: 110, OGAPX: 18, OGAPY: 24, OCOLS: 7, OPAGE: 35,
+      SPX: 360, SPY: 90, SPW: 1200, SPH: 900 // settings panel (modal surface)
+    };
+  }());
 
   // ---- palette (Candy pop on a black ground; brand carries the tile) ------
   kit.INK = "#ffffff";
   kit.DIM = "#9aa0a6";
   kit.FAINT = "#555a60";
-  kit.CYAN = "#4cc9f0";    // page numbers
-  kit.AMBER = "#ffb900";   // cues, toast, countdown
+  kit.CYAN = "#4cc9f0";    // settings values (state surface only)
+  kit.AMBER = "#ffb900";   // toast, settings actions (state surface only)
   kit.GREEN = "#35d435";   // live, on-values
   kit.RED = "#d43535";     // edit mode, danger
   kit.YELLOW = "#ffd200";  // chip-only accent
-  kit.GRID = "#333333";    // unfocused tile border
+  kit.GRID = "#333333";    // port block border, no signal (green means live)
   kit.MONO = "'DejaVu Sans Mono','Noto Sans Mono','Droid Sans Mono','Courier New',monospace";
   kit.DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   kit.MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -116,6 +144,30 @@
     var value = input.is_signal != null ? input.is_signal : input.has_signal;
     return value === 1 || value === "1" || value === true;
   };
+  // Device presence on a port: `deviceName` is the one field the vendor
+  // fills only when a device actually reports itself there (its absence
+  // was why HDMI3 read "HDMI3" while a Fire TV was plugged in). The
+  // other name fields — displayname2, rename, name — are LABELS the
+  // vendor populates for every port, device or not; counting them made
+  // every block green on the panel (2026-11-22). Color reads this, the
+  // same device-side truth the title already uses.
+  kit.deviceOf = function (input) {
+    return kit.text(input.deviceName);
+  };
+  // Rail split truth (owner-locked): the vendor's own label says whether
+  // a source is a physical port. The two-letter codes must match as
+  // whole tokens, not prefixes — the panel proved why: "SC" is the
+  // SCART-era connector, but "SCREEN SHARE" also starts with SC, and
+  // a prefix match filed the screen-share data source into the ports
+  // row. So: HDMI/COMPONENT as prefixes (no data source starts with
+  // them), AV as prefix (no data source collides), and SC only when
+  // it IS the connector word: "SC", "SC1", "SCART" — never "SCREEN".
+  // Everything else (TV tuner, Chromecast, AirPlay, screen share...)
+  // belongs to the data row. Renames never move a source: this reads
+  // `name`, and names are not editable.
+  kit.isPort = function (input) {
+    return /^(HDMI|COMPONENT|AV|SC$|SC[0-9]|SCART)/i.test(kit.text(input.name));
+  };
   kit.text = function (value) { return typeof value === "string" ? value.trim() : ""; };
   kit.isTruthy = function (val) {
     return val === true || val === "true" || val === 1 || val === "1";
@@ -141,6 +193,15 @@
     var t = String(value == null ? "" : value);
     return t.length > n ? t.slice(0, n) : t;
   };
+  // Flat translucent black for the chrome zones over full-page art.
+  // One alpha, one colour, no gradients: the art just reads through.
+  // SCRIM dresses the header; SUPER is the near-black superblock that
+  // carries the rail and the foot as one unit — the apps' own block.
+  kit.SCRIM = "rgba(0,0,0,0.6)";
+  kit.SUPER = "rgba(0,0,0,0.85)";
+  // Silence that closes the rail's lid (the heartbeat samples at 1 s).
+  kit.RAIL_LID_MS = 30000;
+
   kit.wallpaperStyle = function () {
     var wp = self.AlvidaaNativeWallpaper;
     return {
