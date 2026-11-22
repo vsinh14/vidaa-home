@@ -407,7 +407,11 @@ assert.equal(v.idle, false);
 assert.equal(calls.length, n, 'wake key must not activate');
 
 // Render every layer through a fake h and sanity-check the tree.
+const styleSink = [];
 function fakeH(tag, data, children) {
+  if (data && data.style) {
+    for (var fk in data.style) styleSink.push(String(data.style[fk]));
+  }
   const node = { tag, style: data && data.style };
   node.count = 1 + (Array.isArray(children) ? children.reduce((a, c) => a + (c && c.count ? c.count : 0), 0) : 0);
   return node;
@@ -493,5 +497,40 @@ v.openLid();
 assert.equal(v.railOpen, true, 'openLid lifts the lid');
 assert.notEqual(kitK.selKey(v), kB, 'lid travel retargets the clock');
 assert.ok(kitK.phaseMs(v) < 50, 'reopened: clock starts fresh at zero');
+
+// Zen mode (owner, 2026-11-22): 5 s after the lid collapses, the
+// chrome fades to clock + date on bare wallpaper; any key restores
+// everything and lifts the lid.
+assert.equal(kitK.ZEN_MS, 5000, 'chrome fades five seconds after collapse');
+v.page = 'home';
+v.openLid(); v.closeLid();
+assert.ok(v.zenAt > 0, 'collapse arms the zen countdown');
+v.zenTick(Date.now());
+assert.equal(v.zen, false, 'no zen before the five seconds');
+v.zenTick(Date.now() + 6000);
+assert.equal(v.zen, true, 'chrome gone past the five seconds');
+v.zen = false;
+var sinkA = styleSink.length;
+opts.render.call(v, fakeH);
+v.zen = true;
+var sinkC = styleSink.length;
+opts.render.call(v, fakeH);
+function anyStyle(from, sub) {
+  for (var i = from; i < styleSink.length; i++) {
+    if (styleSink[i].indexOf(sub) >= 0) return true;
+  }
+  return false;
+}
+assert.ok(anyStyle(sinkC, "rgba(0,0,0,0.75)"), 'halo glyphs back the zen clock');
+assert.ok(!anyStyle(sinkC, "rgba(0,0,0,0.6)"), 'no header scrim in zen');
+assert.ok(!anyStyle(sinkC, "rgba(0,0,0,0.85)"), 'no super band in zen');
+assert.ok(anyStyle(sinkA, "rgba(0,0,0,0.85)"), 'bands live before zen fades');
+assert.equal(v.handleKey(kitK.keys.UP), true, 'any key wakes zen');
+assert.equal(v.zen, false, 'wake restores chrome');
+assert.equal(v.railOpen, true, 'wake also lifts the lid');
+v.railOpen = true; v.openLid(); v.closeLid(); v.edit = true;
+v.zenTick(Date.now() + 9000);
+assert.equal(v.zen, false, 'an edit session never fades to zen');
+v.edit = false;
 
 console.log('PASS: native/ modules boot, navigate, persist, and render');

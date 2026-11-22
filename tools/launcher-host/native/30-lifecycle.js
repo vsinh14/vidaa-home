@@ -79,6 +79,9 @@
           // home page. Extracted to the model so the test can pull the
           // clock without waiting on this interval.
           vm.railLidTick(nowMs);
+          // 5 s after the lid collapses the chrome fades out to
+          // wallpaper + clock; extracted so the test can pull it.
+          vm.zenTick(nowMs);
           if (vm.autoSwitchAt && nowMs >= vm.autoSwitchAt) {
             vm.triggerAutoSwitch();
           }
@@ -97,6 +100,10 @@
         }, kit.SCROLL_MS);
         this._resize = function () { vm.width = self.innerWidth || 1920; };
         if (self.addEventListener) self.addEventListener("resize", this._resize);
+        // Zen contrast: sample the wallpaper once behind the clock.
+        // Where the panel refuses canvas reads, zenInk stays white
+        // and the dark halo alone carries the contrast.
+        kit.sampleWallpaperInk(function (ink) { vm.zenInk = ink; });
         this.routeFocus();
         // Consume handled keys while bubbling, before document-level defaults.
         // The pages get first refusal; unrelated keys pass straight through

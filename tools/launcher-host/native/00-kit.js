@@ -21,6 +21,7 @@
   kit.LABEL_W = 9;           // label chars fitting the 257 tile's lane at u4
   kit.SCROLL_MS = 333;       // marquee step: ~3 chars/s, integer cells stay sharp
   kit.SCROLL_HOLD = 1000;    // head hold before the scroll starts
+  kit.ZEN_MS = 5000;         // chrome-free mode 5 s after the lid collapses (owner 2026-11-22)
   kit.KB_COLS = 6;
   kit.KB_CELLS = (function () {
     var cells = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
@@ -228,6 +229,54 @@
     var now = Date.now(), k = kit.selKey(vm);
     if (!vm._phase || vm._phase.key !== k) vm._phase = { key: k, t0: now };
     return now - vm._phase.t0;
+  };
+
+  // Zen contrast: the sampled ink picks white or black against the
+  // wallpaper patch behind the clock, and the halo is ALWAYS the
+  // opposite — the guarantee holds even on a mid-grey patch and in
+  // the halo-only fallback when the panel refuses canvas reads.
+  kit.haloFor = function (ink) {
+    return String(ink).toLowerCase() === "#000000"
+      ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.75)";
+  };
+
+  // Sample the wallpaper where the clock and date sit. The image is
+  // painted cover/center on the 1920x1080 stage, so the stage rect
+  // is mapped back through the same cover math into image pixels.
+  // Any failure (no Image, tainted canvas, missing file) is simply
+  // no result — the caller keeps the white halo-only default.
+  kit.sampleWallpaperInk = function (cb) {
+    if (typeof self.Image !== "function" || !self.document ||
+        !self.AlvidaaNativeWallpaper) return false;
+    try {
+      var img = new self.Image();
+      img.onload = function () {
+        try {
+          var gw = 32, gh = 16;
+          var cv = self.document.createElement("canvas");
+          cv.width = gw; cv.height = gh;
+          var g = cv.getContext && cv.getContext("2d");
+          if (!g || !img.width || !img.height) return;
+          var sc = Math.max(1920 / img.width, 1080 / img.height);
+          var ox = (1920 - img.width * sc) / 2, oy = (1080 - img.height * sc) / 2;
+          var x0 = C.MARGIN - 8, y0 = C.CLOCK_Y - 8;
+          var x1 = C.MARGIN + 380, y1 = C.DATE_Y + 40;
+          var sx = Math.max(0, Math.floor((x0 - ox) / sc));
+          var sy = Math.max(0, Math.floor((y0 - oy) / sc));
+          var sw = Math.max(1, Math.min(img.width - sx, Math.ceil((x1 - x0) / sc)));
+          var sh = Math.max(1, Math.min(img.height - sy, Math.ceil((y1 - y0) / sc)));
+          g.drawImage(img, sx, sy, sw, sh, 0, 0, gw, gh);
+          var d = g.getImageData(0, 0, gw, gh).data;
+          var sum = 0, n = d.length / 4, i;
+          for (i = 0; i < d.length; i += 4) {
+            sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          }
+          cb(sum / n > 140 ? "#000000" : "#ffffff");
+        } catch (e) { void e; /* tainted or unsupported: fallback stands */ }
+      };
+      img.src = self.AlvidaaNativeWallpaper;
+      return true;
+    } catch (e) { void e; return false; }
   };
   kit.trunc = function (value, n) {
     var t = String(value == null ? "" : value);

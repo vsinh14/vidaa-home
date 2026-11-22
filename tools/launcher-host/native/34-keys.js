@@ -72,6 +72,14 @@
           this.cancelIdle();
           return true;
         }
+        if (this.zen) {
+          // The key that wakes zen must only wake — and it always
+          // lifts the lid: chrome back, rail open, ready (owner,
+          // 2026-11-22). Same consumption rule as the idle wake.
+          this.zen = false;
+          this.openLid();
+          return true;
+        }
         // Presence: any key restarts the idle window, handled or not.
         this.armIdle();
         this.lastAct = Date.now();

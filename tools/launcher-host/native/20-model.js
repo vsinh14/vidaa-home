@@ -35,6 +35,12 @@
         // bumps it only while a scroll is actually on screen, so
         // the SoC never repaints for nobody.
         mtick: 0,
+        // Zen mode: 5 s after the lid collapses the chrome fades to
+        // just the clock, the date, and the wallpaper (owner,
+        // 2026-11-22). zenAt arms at collapse; any key ends zen AND
+        // lifts the lid. zenInk is sampled from the wallpaper once
+        // at boot; the halo always backs the glyphs regardless.
+        zen: false, zenAt: 0, zenInk: "#ffffff",
         // The rail's lid: DOWN covers the row, 30 s of silence covers it,
         // any key lifts it again. The foot and header never hide. The
         // clock arms at boot, not at zero — a fresh home never starts
@@ -329,10 +335,20 @@
         // after a reopen starts a fresh clock and reads word first,
         // never caught mid-scroll (owner, 2026-11-22).
         this._phaseGen = (this._phaseGen || 0) + 1;
+        this.zenAt = Date.now();   // the 5 s chrome-fade arms now
       },
       openLid: function () {
         this.railOpen = true;
         this._phaseGen = (this._phaseGen || 0) + 1;
+        this.zen = false;
+        this.zenAt = 0;
+      },
+      zenTick: function (nowMs) {
+        // Zen belongs to the resting TV only: never while a modal,
+        // the screensaver, or an active edit session is up.
+        if (this.zen || this.railOpen || this.idle || this.edit ||
+            this.overlay || this.settings) return;
+        if (this.zenAt && nowMs - this.zenAt >= kit.ZEN_MS) this.zen = true;
       },
       clamp: function () {
         var favLen = this.favoriteItems().length;

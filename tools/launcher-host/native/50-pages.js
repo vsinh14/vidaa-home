@@ -19,9 +19,30 @@
     var out = [];
     var now = vm.now || new Date();
     var clock = kit.p2(now.getHours()) + ":" + kit.p2(now.getMinutes());
-    out = out.concat(P.pxText(clock, 13, kit.INK, C.MARGIN, C.CLOCK_Y));
     var date = (kit.DAYS[now.getDay()] + " " + kit.p2(now.getDate()) +
       " " + kit.MONTHS[now.getMonth()]).toUpperCase();
+    if (vm.zen) {
+      // Zen state: time and date on bare wallpaper. The ink is
+      // sampled from the wallpaper patch the glyphs actually sit
+      // on, and four offset halo copies in the OPPOSITE colour
+      // guarantee legibility anywhere on any wallpaper — no
+      // background box, ever (owner, 2026-11-22).
+      var ink = vm.zenInk || kit.INK;
+      var halo = kit.haloFor(ink);
+      var offs = [[-1, 0], [1, 0], [0, -1], [0, 1]], oi;
+      for (oi = 0; oi < 4; oi++) {
+        out = out.concat(P.pxText(clock, 13, halo,
+          C.MARGIN + offs[oi][0], C.CLOCK_Y + offs[oi][1]));
+      }
+      out = out.concat(P.pxText(clock, 13, ink, C.MARGIN, C.CLOCK_Y));
+      for (oi = 0; oi < 4; oi++) {
+        out = out.concat(P.pxText(date, 4, halo,
+          C.MARGIN + offs[oi][0], C.DATE_Y + offs[oi][1]));
+      }
+      out = out.concat(P.pxText(date, 4, ink, C.MARGIN, C.DATE_Y));
+      return out;
+    }
+    out = out.concat(P.pxText(clock, 13, kit.INK, C.MARGIN, C.CLOCK_Y));
     out = out.concat(P.pxText(date, 4, kit.DIM, C.MARGIN, C.DATE_Y));
     // The corner slot carries the page's plain word (HOME, INPUTS) in
     // ink u7 — same white as the clock and rail text, so nothing on a
@@ -57,6 +78,13 @@
   // so text and tiles land on top.
   kit.pageBackdrop = function (P, vm) {
     var out = [];
+    if (vm.zen) {
+      // Zen: wallpaper only. No scrim band, no super band — the
+      // clock sits bare on the art and the sampled ink + halo
+      // carry the contrast instead of a background (owner, 2026-11-22).
+      out.push(P.box(0, 0, 1920, 1080, kit.wallpaperStyle()));
+      return out;
+    }
     // Lid down: foot band only. Lid up: one rail tall. Expanded
     // Inputs: the block grows to cover both rows.
     var top = !vm.railOpen ? C.SUPER_FOOT_Y :
@@ -185,15 +213,18 @@
 
     // Footer: key chips on the left, the page cue on the right — as
     // before. In edit mode the cue turns red and says what OK will do.
-    out = out.concat(kit.pageFooter(P, vm));
-    if (vm.edit) {
-      var editCue = "OK REMOVE RED EXIT";
-      out = out.concat(P.pxText(editCue, 4, kit.RED,
-        C.RIGHT - P.textWidth(editCue, 4), C.FOOT_Y));
-    } else {
-      var cue = "INPUTS >";
-      out = out.concat(P.pxText(cue, 4, kit.DIM,
-        C.RIGHT - P.textWidth(cue, 4), C.FOOT_Y));
+    // Zen: the foot is gone entirely (owner, 2026-11-22).
+    if (!vm.zen) {
+      out = out.concat(kit.pageFooter(P, vm));
+      if (vm.edit) {
+        var editCue = "OK REMOVE RED EXIT";
+        out = out.concat(P.pxText(editCue, 4, kit.RED,
+          C.RIGHT - P.textWidth(editCue, 4), C.FOOT_Y));
+      } else {
+        var cue = "INPUTS >";
+        out = out.concat(P.pxText(cue, 4, kit.DIM,
+          C.RIGHT - P.textWidth(cue, 4), C.FOOT_Y));
+      }
     }
     return out;
   };
@@ -255,6 +286,7 @@
     // while the data row is already on screen. Where the ring sits
     // changes nothing — the cue speaks to the row, not the selector.
     var yF = C.FOOT_Y;
+    if (vm.zen) return out;   // zen: no foot cues at all
     out.push(P.chip(C.MARGIN, yF + 3, kit.YELLOW));
     out = out.concat(P.pxText("APPS", 4, kit.INK, C.MARGIN + 32, yF));
     if (data.length && vm.railOpen && !vm.inputsExpanded) {
