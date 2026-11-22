@@ -414,7 +414,9 @@ assert.equal(calls.length, n, 'wake key must not activate');
 
 // Render every layer through a fake h and sanity-check the tree.
 const styleSink = [];
+const tagSink = [];
 function fakeH(tag, data, children) {
+  tagSink.push(String(tag));
   if (data && data.style) {
     for (var fk in data.style) styleSink.push(String(data.style[fk]));
   }
@@ -448,6 +450,24 @@ v.idle = true; v.idleFade = 1;
 const idleNode = opts.render.call(v, fakeH);
 assert.ok(idleNode.count > 100, 'idle clock renders big, got ' + idleNode.count);
 v.idle = false;
+
+// Video-plane probe branch (4K wallpaper experiment, 2026-11-22): when the
+// build injects the probe global, renderAll must swap the WHOLE page for
+// one video element over a transparent root — the point of the probe is
+// that nothing else paints over the plane.
+sandbox.AlvidaaProbeVideo = 1;
+sandbox.AlvidaaProbeSrc = "file:///var/local/alvidaa/wallpapers/probe/wp.mp4";
+tagSink.length = 0;
+const probeNode = opts.render.call(v, fakeH);
+assert.ok(tagSink.indexOf("video") >= 0, 'probe render must include a video element');
+// Root + one video + the VIDPROBE label's pixel glyphs and nothing else:
+// the point is that no page chrome (tiles, rail, foot) rides over the
+// plane. The pixel font alone costs ~83 blocks for 8 letters, so the
+// ceiling is set just above the label, still far below a full page.
+assert.ok(probeNode.count < 110,
+  'probe page must be label-and-video only, got ' + probeNode.count);
+delete sandbox.AlvidaaProbeVideo;
+delete sandbox.AlvidaaProbeSrc;
 
 // Scale: 3840-wide stage must double every coordinate, rounded.
 v.width = 3840;

@@ -58,6 +58,30 @@
           });
           return rows;
         }
+        if (this.settingsPage === "wallpapers") {
+          var WPw = self.AlvidaaWallpaper;
+          if (!WPw) return rows;
+          var wstate = WPw.state();
+          (WPw.list || []).forEach(function (w) {
+            var inPool = wstate.pool.indexOf(w.id) !== -1;
+            rows.push({
+              kind: "wallpaper", wp: w,
+              label: String(w.id),
+              // The tick is the whole interface: brackets read as teletext
+              // checkboxes, [x] in pool, [ ] not.
+              value: inPool ? "[x]" : "[ ]",
+              sub: w.kind === "image" ? "image" : "clip",
+              speak: String(w.id) + (inPool ? ", in pool" : ", not in pool")
+            });
+          });
+          rows.push({
+            kind: "wp-timer", label: "Swap timer",
+            value: wstate.timer,
+            sub: "off keeps one image \u00b7 longer rhythms rotate the pool",
+            speak: "Swap timer, " + wstate.timer
+          });
+          return rows;
+        }
         var total = this.allApps().length, customCount = 0;
         this.sources.forEach(function (input) {
           if (vm.prefs && vm.prefs.customNames &&
@@ -82,6 +106,20 @@
           sub: this.sources.length + " inputs" +
             (customCount ? " \u00b7 " + customCount + " renamed" : "")
         });
+        // Wallpapers (owner feature): ticks are pool membership, Timer is
+        // the swap rhythm, an empty pool keeps the baked art. One door:
+        // this page drives the AlvidaaWallpaper engine that both lanes
+        // implement with the same API.
+        var WP = self.AlvidaaWallpaper;
+        if (WP) {
+          var wst = WP.state();
+          rows.push({
+            kind: "open-wallpapers", label: "Wallpapers",
+            sub: WP.list.length + " wallpapers \u00b7 " +
+              (wst.current || "baked art") +
+              (wst.timer !== "off" ? " \u00b7 swaps " + wst.timer : "")
+          });
+        }
         var only = this.prefs && this.prefs.onlyApps;
         if (Array.isArray(only) && only.length) {
           rows.push({
@@ -180,6 +218,29 @@
         kit.writePref("alvidaa_only_apps", []);
         this.readPrefs();
       },
+      // --- wallpapers (owner-locked design) ----------------------------------
+      // Ticks are pool membership: OK (or Left/Right) flips one wallpaper in
+      // or out. The engine owns the storage and the repaint; settings only
+      // call setPool and rebuild rows.
+      toggleWallpaper: function (w) {
+        var WP = self.AlvidaaWallpaper;
+        if (!WP || !w || w.id == null) return;
+        var pool = WP.state().pool.slice();
+        var at = pool.indexOf(String(w.id));
+        if (at >= 0) pool.splice(at, 1);
+        else pool.push(String(w.id));
+        WP.setPool(pool);
+        this.clamp();
+      },
+      // Timer walks off -> 10m -> 1h -> 1d -> off in the pressed direction.
+      cycleWpTimer: function (dir) {
+        var WP = self.AlvidaaWallpaper;
+        if (!WP) return;
+        var order = WP.timers || ["off", "10m", "1h", "1d"];
+        var at = order.indexOf(WP.state().timer);
+        at = ((at + dir) % order.length + order.length) % order.length;
+        WP.setTimer(order[at]);
+      },
       // --- input name editor -------------------------------------------------
       openNameEditor: function (input) {
         if (!input || input.sourceId == null) return;
@@ -243,6 +304,9 @@
         else if (row.kind === "idle") this.cycleIdle(1);
         else if (row.kind === "open-apps") { this.settingsPage = "apps"; this.settingsIndex = 0; this.clamp(); }
         else if (row.kind === "open-inputs") { this.settingsPage = "inputs"; this.settingsIndex = 0; this.clamp(); }
+        else if (row.kind === "open-wallpapers") { this.settingsPage = "wallpapers"; this.settingsIndex = 0; this.clamp(); }
+        else if (row.kind === "wallpaper") this.toggleWallpaper(row.wp);
+        else if (row.kind === "wp-timer") this.cycleWpTimer(1);
         else if (row.kind === "only-list") this.clearOnlyList();
         else if (row.kind === "app") this.toggleAppVisible(row.app);
         else if (row.kind === "input") this.openNameEditor(row.input);
@@ -260,6 +324,8 @@
         if (row.kind === "autoswitch") this.toggleAutoSwitch();
         else if (row.kind === "recent") this.toggleRecentOrder();
         else if (row.kind === "idle") this.cycleIdle(dir);
+        else if (row.kind === "wallpaper") this.toggleWallpaper(row.wp);
+        else if (row.kind === "wp-timer") this.cycleWpTimer(dir);
       },
       handleSettingsKey: function (code) {
         var keys = kit.keys;

@@ -141,16 +141,17 @@
   }
 
   var SETTINGS_TITLES = { root: "HOME SETTINGS", apps: "APPS",
-    inputs: "INPUT NAMES", name: "RENAME" };
+    inputs: "INPUT NAMES", wallpapers: "WALLPAPERS", name: "RENAME" };
   var SETTINGS_HINTS = {
     root: "UP DOWN MOVE  OK OPEN",
     apps: "OK HIDE/SHOW",
     inputs: "OK RENAME",
+    wallpapers: "OK OR LEFT RIGHT TICKS THE POOL",
     name: "BACK SAVES"
   };
   function valueColour(v) {
-    if (v === "on" || v === "shown") return kit.GREEN;
-    if (v === "off" || v === "hidden") return kit.FAINT;
+    if (v === "on" || v === "shown" || v === "[x]") return kit.GREEN;
+    if (v === "off" || v === "hidden" || v === "[ ]") return kit.FAINT;
     if (v === "custom") return kit.CYAN;
     return kit.CYAN;
   }
@@ -301,6 +302,78 @@
               // while a long name is scrolling, and Vue repaints.
     var scale = (Number(vm.width) || 1920) / 1920;
     var P = kit.makePaint(h, scale);
+    // VIDEO-PLANE PROBE (owner asked for 4K wallpapers, 2026-11-22): the
+    // GUI framebuffers on this box max out at 1920x1080, so native-4K
+    // pixels can only reach the panel through the hardware video plane
+    // the media stack (Netflix, input preview) uses. This one-off branch,
+    // armed only by the self.AlvidaaProbeVideo global the build tool may
+    // inject, paints NOTHING but a full-screen <video> over a fully
+    // transparent page: if the HAL screenshot shows the clip, the plane
+    // is reachable from this page and the wallpaper engine can use it.
+    if (self.AlvidaaProbeVideo) {
+      // v3: three stacked videos — file:// h264, http h264, http hevc —
+      // each with its own status line, so ONE boot answers both open
+      // questions: is file:// media blocked, and is the codec supported?
+      // (RS0 + no error on file:// pointed at a blocked fetch, 2026-11-22.)
+      var probeSrcs = [
+        "file:///var/local/alvidaa/wallpapers/probe/wp_h264.mp4",
+        "http://127.0.0.1:8770/probe_h264.mp4",
+        "http://127.0.0.1:8770/probe_hevc.mp4"
+      ];
+      if (!vm._probeArm) {
+        vm._probeArm = 1;
+        self.setInterval(function () {
+          try {
+            var els = self.document && self.document.querySelectorAll &&
+              self.document.querySelectorAll("video");
+            if (!els || !els.length) { vm.probeStatus = ["NOVIDELEM", "", ""]; }
+            else {
+              var out = [];
+              for (var pi = 0; pi < els.length; pi++) {
+                var el = els[pi];
+                var err = el.error ? ("E" + el.error.code) : "no";
+                out.push("RS" + el.readyState +
+                  " CT" + Number(el.currentTime || 0).toFixed(1) +
+                  " VW" + el.videoWidth + "x" + el.videoHeight +
+                  " ER" + err);
+              }
+              vm.probeStatus = out;
+            }
+          } catch (e) { vm.probeStatus = ["EXC " + String(e && e.name), "", ""]; }
+          vm.mtick = (vm.mtick || 0) + 1;
+        }, 2000);
+      }
+      var probeKids = [];
+      for (var vi = 0; vi < probeSrcs.length; vi++) {
+        probeKids.push(h("video", {
+          props: { muted: true, autoplay: true, loop: true },
+          attrs: {
+            src: probeSrcs[vi],
+            autoplay: "1", loop: "1", muted: "1", playsinline: "1"
+          },
+          style: {
+            position: "absolute", left: 0, top: 0, width: "100%", height: "100%",
+            objectFit: "cover"
+          }
+        }));
+      }
+      probeKids = probeKids.concat(P.pxText("VIDPROBE", 6, "#ffffff", 24, 24));
+      var stat = vm.probeStatus || [];
+      probeKids.push(P.mono(24, 84, 1600, 30,
+        "F " + String(stat[0] || "BOOT"), "#00ff00"));
+      probeKids.push(P.mono(24, 126, 1600, 30,
+        "H " + String(stat[1] || "BOOT"), "#00ff00"));
+      probeKids.push(P.mono(24, 168, 1600, 30,
+        "V " + String(stat[2] || "BOOT"), "#00ff00"));
+      return h("div", {
+        attrs: { id: "alvidaa-native" },
+        style: {
+          position: "absolute", left: 0, top: 0, width: "100%", height: "100%",
+          backgroundColor: "rgba(0,0,0,0)", color: "#ffffff",
+          fontFamily: kit.MONO, overflow: "hidden"
+        }
+      }, probeKids);
+    }
     var kids = [];
     if (vm.idle) {
       kids = kit.renderIdle(P, vm);

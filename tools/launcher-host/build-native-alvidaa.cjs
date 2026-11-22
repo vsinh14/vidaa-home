@@ -23,6 +23,7 @@ const BASE_PARTS = [
   'native/30-lifecycle.js',
   'native/32-settings.js',
   'native/34-keys.js',
+  'native/36-wallpaper.js',
   'native/40-paint.js',
   'native/50-pages.js',
   'native/60-layers.js',
@@ -63,6 +64,12 @@ function build(stockFile, output, expect, options) {
   // self-contained file and the repo carries no image asset.
   let art = 'self.AlvidaaNativeWallpaper="data:image/png;base64,' +
     wallpaper.render().toString('base64') + '";';
+  // PROBE_VIDEO=<file url> arms the one-off video-plane probe (see the
+  // probe branch in kit.renderAll). Throwaway diagnostics only.
+  if (process.env.PROBE_VIDEO) {
+    art += 'self.AlvidaaProbeVideo=1;self.AlvidaaProbeSrc=' +
+      JSON.stringify(String(process.env.PROBE_VIDEO)) + ';';
+  }
   const inputArt = options && options.inputArt;
   if (inputArt && typeof inputArt === 'object' && Object.keys(inputArt).length > 0) {
     art += '\nself.AlvidaaNativeInputArt=' + JSON.stringify(inputArt) + ';';

@@ -2,3 +2,8 @@
 firmware/stock-app.js
 firmware/candidate-app.js
 firmware/*.img
+
+# build artifacts and normalize cache never enter the repo
+tools/launcher-host/page/dist/
+tools/wallpaper-sync/.cache/
+firmware/candidate-probe.js

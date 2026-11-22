@@ -15,6 +15,11 @@
     methods: {
       start: function () {
         this.readPrefs();
+        // Wallpaper engine (module 36): prefs are lazy because sdk lands at
+        // component create; this is the point where they can load durably.
+        if (self.AlvidaaWallpaper && self.AlvidaaWallpaper.refresh) {
+          self.AlvidaaWallpaper.refresh();
+        }
         if (this._running) return;
         this._running = true;
         var vm = this;

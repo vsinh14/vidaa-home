@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>ALVIDAA</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+  /* The wallpaper sits on the hardware video plane; the Vue render is the
+     GUI plane above it. Promotion (translateZ + z-index) is what makes
+     Chromium composite the DOM over the full-bleed video — proven on the
+     panel 2026-11-23. */
+  #wallpaper {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    object-fit: cover; background: #000; display: none; z-index: 0;
+  }
+  body.wp #wallpaper { display: block; }
+  /* Structure mirrored from the fork page (the one that composites over
+     video on this panel): in-flow content, promoted only while the
+     wallpaper layer is up — no fixed positioning, no transform. */
+  #app { width: 100%; height: 100%; }
+  /* Vue's $mount("#app") REPLACES #app, so promote a wrapper that
+     survives the mount instead of #app itself. */
+  body.wp #promote { position: relative; z-index: 1; }
+  #promote { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<video id="wallpaper" autoplay loop muted playsinline preload="auto" tabindex="-1" aria-hidden="true"></video>
+<div id="promote"><div id="app"></div></div>
+<script src="/wallpapers/wallpapers.js"></script>
+<script src="/home/home.js"></script>
+</body>
+</html>
