@@ -26,7 +26,7 @@ const KEYMAP = {
   UP: 19, DOWN: 20, LEFT: 21, RIGHT: 22, ENTER: 13, BACK: 461, RETURN: 461,
   NUM_0: 48, NUM_1: 49, NUM_2: 50, NUM_3: 51, NUM_4: 52,
   NUM_5: 53, NUM_6: 54, NUM_7: 55, NUM_8: 56, NUM_9: 57,
-  RED: 182, GREEN: 183, YELLOW: 184, MENU: 138
+  RED: 182, GREEN: 183, YELLOW: 184, BLUE: 185, MENU: 138
 };
 const calls = [];
 const sandbox = {
@@ -179,10 +179,12 @@ v.handleKey(KEYMAP.RED); assert.equal(v.edit, true);
 v.handleKey(KEYMAP.ENTER);
 assert.equal(v.favoriteItems().length, 2);
 v.handleKey(KEYMAP.RED); assert.equal(v.edit, false);
-// GREEN is unbound (OK launches, the remote has it) and UP at the P100
-// root stays the vendor's. DOWN is the rail's lid: it covers the row,
-// and the next key's whole job is to lift it back.
-assert.equal(v.handleKey(KEYMAP.GREEN), false);
+// GREEN is bound to the vendor's TV sheet now (owner, 2026-11-22),
+// so the press is claimed. UP at the P100 root stays the vendor's.
+// DOWN is the rail's lid: it covers the row, and the next key's
+// whole job is to lift it back.
+assert.equal(v.handleKey(KEYMAP.GREEN), true);
+assert.deepEqual(calls[calls.length - 1], ['stock-settings'], 'green = TV settings');
 assert.equal(v.handleKey(KEYMAP.UP), false);
 assert.equal(v.railOpen, true);
 assert.equal(v.handleKey(KEYMAP.DOWN), true);
@@ -354,12 +356,16 @@ assert.equal(v.overlayIndex, 3, 'DOWN (+7) clamps to the last app');
 v.handleKey(KEYMAP.ENTER);
 assert.equal(v.overlay, false);
 assert.deepEqual(calls[calls.length - 1], ['launch', 'browser']);
-// RED inside the overlay opens stock settings.
+// RED is unbound inside the grid (owner, 2026-11-22): the key falls
+// to the vendor and the grid stays put; YELLOW is the way back out.
 v.handleKey(KEYMAP.YELLOW);
-v.handleKey(KEYMAP.RED);
-assert.deepEqual(calls[calls.length - 1], ['stock-settings']);
-v.handleKey(KEYMAP.BACK); // back to the page behind the overlay? overlay was left open by stock settings
-v.closeOverlay();
+assert.equal(v.overlay, true, 'YELLOW re-opens the grid');
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.overlayEdit, true, 'RED edits the grid like the rail');
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.overlayEdit, false, 'RED exits the edit');
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.overlay, false, 'YELLOW exits apps mode');
 
 // Launcher settings surface: rows, toggles, idle cycle, name editor.
 v.openLauncherSettings();
@@ -532,5 +538,121 @@ v.railOpen = true; v.openLid(); v.closeLid(); v.edit = true;
 v.zenTick(Date.now() + 9000);
 assert.equal(v.zen, false, 'an edit session never fades to zen');
 v.edit = false;
+
+// YELLOW is a two-way switch for apps mode (owner, 2026-11-22).
+v.overlay = false;
+v.handleKey(KEYMAP.YELLOW);
+assert.equal(v.overlay, true, 'YELLOW opens apps mode');
+assert.equal(v.handleKey(KEYMAP.YELLOW), true, 'YELLOW is claimed inside apps mode');
+assert.equal(v.overlay, false, 'YELLOW exits apps mode');
+
+// GREEN = the vendor's TV sheet, BLUE = this launcher's settings,
+// bound on home and on inputs (owner, 2026-11-22).
+v.page = 'home';
+v.handleKey(KEYMAP.GREEN);
+assert.deepEqual(calls[calls.length - 1], ['stock-settings'], 'green opens TV settings');
+v.handleKey(KEYMAP.BLUE);
+assert.equal(v.settings, true, 'blue opens the launcher settings page');
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.settings, false, 'back closes the settings root');
+v.page = 'inputs';
+v.handleKey(KEYMAP.GREEN);
+assert.deepEqual(calls[calls.length - 1], ['stock-settings'], 'green works on inputs too');
+v.handleKey(KEYMAP.BLUE);
+assert.equal(v.settings, true, 'blue works on inputs too');
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.settings, false);
+v.page = 'home';
+
+// --- settings panel wraps its content (owner, 2026-11-22) -----------
+// A short list is a short box: no blank band under the last row. And
+// Favorites is a report row, not a page — pins live on the rail, where
+// RED edits and OK removes; the APPS page pins back.
+v.handleKey(KEYMAP.BLUE);
+assert.equal(v.settings, true, 'blue opens launcher settings');
+assert.equal(v.settingsPage, 'root');
+const sRows = v.settingsRows();
+assert.ok(!sRows.some(r => /fav/i.test(r.kind) || /fav/i.test(String(r.label))),
+  'no favorites row in settings at all');
+const sMark = styleSink.length;
+opts.render.call(v, fakeH);
+const wantH = (140 + Math.min(sRows.length, 9) * 76 + 40) + 'px';
+assert.ok(styleSink.slice(sMark).includes(wantH), 'box height wraps its rows: ' + wantH);
+assert.ok(!styleSink.slice(sMark).includes('height:900px'), 'no full-height box for a short list');
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.settings, false, 'back closes the wrapped panel');
+v.page = 'home';
+
+// --- edit mode moves pins (reorder lives on the rail) ---------------
+v.edit = true; v.railOpen = true; v.page = 'home'; v.fav = 1;
+v.prefs.favorites = ['netflix', 'browser'];
+assert.equal(v.handleKey(KEYMAP.UP), true, 'UP reorders while editing');
+assert.deepEqual(v.prefs.favorites, ['browser', 'netflix'], 'UP swaps the pin with its neighbour');
+assert.equal(v.fav, 0, 'selection follows the moved app');
+assert.equal(v.handleKey(KEYMAP.DOWN), true);
+assert.deepEqual(v.prefs.favorites, ['netflix', 'browser'], 'DOWN swaps back');
+assert.equal(v.fav, 1);
+v.handleKey(KEYMAP.DOWN); // at the end: no wrap, and no lid close mid-edit
+assert.deepEqual(v.prefs.favorites, ['netflix', 'browser'], 'no-op at the rail end');
+assert.equal(v.railOpen, true, 'the lid stays open while editing');
+v.handleKey(KEYMAP.ENTER); // OK removes the selected pin
+assert.deepEqual(v.prefs.favorites, ['netflix'], 'OK still removes in edit mode');
+v.edit = false;
+
+// --- the grid edit: RED = edit, OK toggles the pin, one view only ---
+v.prefs.favorites = ['netflix'];
+v.page = 'home';
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.overlayEdit, false, 'a fresh open starts calm');
+assert.equal(v.overlaySpans(), null, 'one view: no pin sections over the grid');
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.overlayEdit, true, 'RED edits the grid like the rail');
+assert.equal(v.overlayIndex, 0, 'entering an edit never moves the focus');
+const gList = v.overlayList();
+let netflixAt = -1;
+for (let gi = 0; gi < gList.length; gi++) {
+  if (String(gList[gi].appId) === 'netflix') { netflixAt = gi; break; }
+}
+assert.ok(netflixAt >= 0, 'netflix sits in the single flat grid');
+v.overlayIndex = netflixAt;
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
+assert.deepEqual(v.prefs.favorites, [], 'OK in edit unpins the focused app');
+assert.equal(v.overlay, true, 'pinning never closes the grid');
+assert.equal(v.overlayIndex, netflixAt, 'the toggle never moves the focus');
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
+assert.deepEqual(v.prefs.favorites, ['netflix'], 'OK pins it back, in the same seat');
+assert.equal(v.pinSlot(v.overlayList()[netflixAt]), 1, 'the tile wears its rail slot');
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.overlayEdit, false, 'RED exits the edit');
+assert.equal(v.handleKey(KEYMAP.ENTER), true);
+assert.equal(v.overlay, false, 'outside edit, OK launches instead');
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.handleKey(KEYMAP.RED), true);
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.overlay, false, 'YELLOW closes from an edit too');
+assert.equal(v.handleKey(KEYMAP.YELLOW), true);
+assert.equal(v.overlayEdit, false, 'closing resets the edit');
+v.handleKey(KEYMAP.BACK);
+assert.equal(v.overlay, false, 'BACK closes the grid');
+
+// --- settings no longer pins: one door per decision -----------------
+v.settings = true; v.settingsPage = 'apps'; v.settingsIndex = 0;
+const setRows = v.settingsRows();
+let appRowAt = -1;
+for (let si = 0; si < setRows.length; si++) {
+  if (setRows[si].kind === 'app') { appRowAt = si; break; }
+}
+assert.ok(appRowAt >= 0, 'the apps page lists apps');
+const favsBefore = v.prefs.favorites.slice();
+v.settingsIndex = appRowAt;
+v.handleKey(KEYMAP.LEFT);
+assert.deepEqual(v.prefs.favorites, favsBefore, 'LEFT in settings no longer pins');
+const hid = String(setRows[appRowAt].app.appId);
+v.handleKey(KEYMAP.ENTER); // hide the app
+assert.ok((v.prefs.hiddenApps || []).some(a => String(a) === hid), 'OK hides');
+v.settingsIndex = appRowAt;
+v.handleKey(KEYMAP.ENTER); // show it again
+assert.ok(!(v.prefs.hiddenApps || []).some(a => String(a) === hid), 'OK shows again');
+v.settings = false; v.settingsPage = 'root';
 
 console.log('PASS: native/ modules boot, navigate, persist, and render');

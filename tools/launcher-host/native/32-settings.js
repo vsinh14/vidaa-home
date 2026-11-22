@@ -2,9 +2,10 @@
  *
  * The Launcher's own settings page (not the stock TV menu): rows per
  * page, the actions they trigger, and the name editor's on-screen
- * keyboard. Bodies carried over verbatim from the pre-split frontend;
- * FAV_MAX moved 6 -> 18, so the favorites picker says "18" and the rail
- * pages in blocks of six.
+ * keyboard. Favorites have no page of their own (owner, 2026-11-22):
+ * they are managed on the rail — RED edits, OK removes — and pinned
+ * back from the APPS page; the root only reports the count. FAV_MAX
+ * is 18: 7-up rail pages, pages need not be full.
  */
 (function (self) {
   "use strict";
@@ -18,45 +19,6 @@
       settingsRows: function () {
         var vm = this, rows = [];
         if (this.settingsPage === "name") return rows;
-        if (this.settingsPage === "favorites") {
-          // The picker: pinned apps first, in pin order (OK removes, a
-          // Move up row reorders), then every unpinned app (OK adds).
-          var favs = (this.prefs && this.prefs.favorites) || [];
-          var pinned = {};
-          favs.forEach(function (id) { pinned[String(id)] = true; });
-          var favApps = [];
-          favs.forEach(function (id) {
-            for (var j = 0; j < vm.apps.length; j++) {
-              if (String(vm.apps[j].appId) === String(id)) { favApps.push(vm.apps[j]); break; }
-            }
-          });
-          favApps.forEach(function (app, i) {
-            rows.push({
-              kind: "fav-remove", favIndex: i, app: app,
-              label: (i + 1) + ". " + kit.shortName(app.appName),
-              value: "OK removes",
-              speak: "Favorite " + (i + 1) + ", " + kit.shortName(app.appName) + ", OK removes"
-            });
-            if (i > 0) {
-              rows.push({
-                kind: "fav-up", favIndex: i,
-                label: "Move up", sub: "above " + kit.shortName(app.appName),
-                speak: "Move " + kit.shortName(app.appName) + " up"
-              });
-            }
-          });
-          this.allApps().forEach(function (app) {
-            if (!vm.appVisible(app) || pinned[String(app.appId)]) return;
-            var full = favs.length >= kit.FAV_MAX;
-            rows.push({
-              kind: "fav-add", app: app,
-              label: "Add " + kit.shortName(app.appName),
-              value: full ? "favorites full" : "OK adds",
-              speak: kit.shortName(app.appName) + (full ? ", favorites full" : ", OK adds")
-            });
-          });
-          return rows;
-        }
         if (this.settingsPage === "apps") {
           var favs2 = (this.prefs && this.prefs.favorites) || [];
           this.allApps().forEach(function (app) {
@@ -109,11 +71,11 @@
           kind: "open-apps", label: "Apps",
           sub: this.apps.length + " shown, " + (total - this.apps.length) + " hidden"
         });
-        var favCount = ((this.prefs && this.prefs.favorites) || []).length;
-        rows.push({
-          kind: "open-favorites", label: "Favorites",
-          sub: favCount + " of " + kit.FAV_MAX + " pinned"
-        });
+        // No favorites row at all (owner, 2026-11-22): pins live on
+        // the rail (RED edits, OK removes, UP/DOWN moves) and in the
+        // apps grid (RED edits, OK pins/unpins — the same RED/OK
+        // language, one door per decision). A report row here would
+        // just restate what those screens show.
         rows.push({
           kind: "open-inputs", label: "Input names",
           sub: this.sources.length + " inputs" +
@@ -188,9 +150,8 @@
         kit.writePref("alvidaa_favorites", favs);
         this.readPrefs();
       },
-      // Picker actions: remove one pin, move one pin up, add a pin. Each
-      // writes through the same pref key and keeps the rail bounded by
-      // FAV_MAX.
+      // Rail edit mode calls this when OK removes a pinned tile.
+      // Writes through the same pref key the pin toggle uses.
       removeFavorite: function (index) {
         var favs = Array.isArray(this.prefs.favorites) ? this.prefs.favorites.slice() : [];
         if (index < 0 || index >= favs.length) return;
@@ -199,26 +160,19 @@
         this.readPrefs();
         this.clamp();
       },
-      moveFavoriteUp: function (index) {
+      // Rail edit mode calls this for UP/DOWN: the selected pin swaps
+      // with its neighbour, and the selection follows the moved app so
+      // repeated presses keep walking the same tile down (or up) the
+      // rail. No-ops at the ends.
+      moveFavorite: function (index, dir) {
         var favs = Array.isArray(this.prefs.favorites) ? this.prefs.favorites.slice() : [];
-        if (index <= 0 || index >= favs.length) return;
+        var to = index + dir;
+        if (index < 0 || index >= favs.length || to < 0 || to >= favs.length) return;
         var moved = favs.splice(index, 1)[0];
-        favs.splice(index - 1, 0, moved);
+        favs.splice(to, 0, moved);
         kit.writePref("alvidaa_favorites", favs);
         this.readPrefs();
-        this.clamp();
-      },
-      addFavorite: function (app) {
-        if (!app || app.appId == null) return;
-        var favs = Array.isArray(this.prefs.favorites) ? this.prefs.favorites.slice() : [];
-        if (favs.length >= kit.FAV_MAX) { this.showToast("favorites are full"); return; }
-        var id = String(app.appId);
-        for (var i = 0; i < favs.length; i++) {
-          if (String(favs[i]) === id) return;
-        }
-        favs.push(id);
-        kit.writePref("alvidaa_favorites", favs);
-        this.readPrefs();
+        this.fav = to;
         this.clamp();
       },
       clearOnlyList: function () {
@@ -287,7 +241,6 @@
         else if (row.kind === "recent") this.toggleRecentOrder();
         else if (row.kind === "idle") this.cycleIdle(1);
         else if (row.kind === "open-apps") { this.settingsPage = "apps"; this.settingsIndex = 0; this.clamp(); }
-        else if (row.kind === "open-favorites") { this.settingsPage = "favorites"; this.settingsIndex = 0; this.clamp(); }
         else if (row.kind === "open-inputs") { this.settingsPage = "inputs"; this.settingsIndex = 0; this.clamp(); }
         else if (row.kind === "only-list") this.clearOnlyList();
         else if (row.kind === "app") this.toggleAppVisible(row.app);
@@ -297,14 +250,14 @@
       nudgeSettingsRow: function (dir) {
         var row = this.settingsRows()[this.settingsIndex];
         if (!row) return;
-        // Left/Right change a value: the toggles, the pin, and the idle
-        // timeout, which steps off / 1 / 5 / 15 in the direction pressed.
+        // Left/Right change a value: the toggles and the idle timeout,
+        // which steps off / 1 / 5 / 15 in the direction pressed. Pins
+        // are NOT edited here any more (owner redesign, 2026-11-22):
+        // one door per decision — membership lives in the apps grid
+        // (RED edits, OK pins), this page only filters what the grid
+        // and rail may show at all. The row still SHOWS the pin.
         if (row.kind === "autoswitch") this.toggleAutoSwitch();
         else if (row.kind === "recent") this.toggleRecentOrder();
-        else if (row.kind === "app") this.togglePin(row.app);
-        else if (row.kind === "fav-remove") this.removeFavorite(row.favIndex);
-        else if (row.kind === "fav-up") this.moveFavoriteUp(row.favIndex);
-        else if (row.kind === "fav-add") this.addFavorite(row.app);
         else if (row.kind === "idle") this.cycleIdle(dir);
       },
       handleSettingsKey: function (code) {

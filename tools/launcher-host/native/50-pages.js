@@ -53,17 +53,32 @@
     return out;
   };
 
+  // The left-hand legend, in one place so both pages draw the same
+  // chain and Inputs can extend it without duplicating it. Order is
+  // the owner's (2026-11-22): APPS first, GREEN (the vendor's TV
+  // settings) second, BLUE (this launcher's own settings — the page
+  // that previously had no button door at all) third, EDIT last and
+  // home-only; P110 keeps no edit mode. Every option word is five
+  // characters or fewer (owner, 2026-11-22): the chip carries the
+  // colour, the word only has to name the door.
+  kit.footWords = function (P, vm) {
+    var out = [];
+    var x = C.MARGIN;
+    out.push([x, kit.YELLOW, "APPS"]);
+    x += 32 + P.textWidth("APPS", 4) + 32;
+    out.push([x, kit.GREEN, "TV"]);
+    x += 32 + P.textWidth("TV", 4) + 32;
+    out.push([x, kit.BLUE, "HOME"]);
+    x += 32 + P.textWidth("HOME", 4) + 32;
+    if (vm.page !== "inputs") out.push([x, kit.RED, "EDIT"]);
+    return out;
+  };
+
   kit.pageFooter = function (P, vm) {
     var out = [];
     var y = C.FOOT_Y;
-    var words = [];
     // chip + word pairs: colour keys explained where they are used.
-    // The pairs swapped places — APPS reads first, EDIT second. GREEN
-    // is deliberately absent: launching is the OK key, and a
-    // colour-key alias for it is legend noise.
-    words.push([C.MARGIN, kit.YELLOW, "APPS"]);
-    var editX = C.MARGIN + 32 + P.textWidth("APPS", 4) + 32;
-    words.push([editX, kit.RED, "EDIT"]);
+    var words = kit.footWords(P, vm);
     for (var i = 0; i < words.length; i++) {
       out.push(P.chip(words[i][0], y + 3, words[i][1]));
       out = out.concat(P.pxText(words[i][2], 4, kit.INK, words[i][0] + 32, y));
@@ -217,7 +232,7 @@
     if (!vm.zen) {
       out = out.concat(kit.pageFooter(P, vm));
       if (vm.edit) {
-        var editCue = "OK REMOVE RED EXIT";
+        var editCue = "UP DOWN MOVE   OK REMOVE   RED EXIT";
         out = out.concat(P.pxText(editCue, 4, kit.RED,
           C.RIGHT - P.textWidth(editCue, 4), C.FOOT_Y));
       } else {
@@ -287,11 +302,18 @@
     // changes nothing — the cue speaks to the row, not the selector.
     var yF = C.FOOT_Y;
     if (vm.zen) return out;   // zen: no foot cues at all
-    out.push(P.chip(C.MARGIN, yF + 3, kit.YELLOW));
-    out = out.concat(P.pxText("APPS", 4, kit.INK, C.MARGIN + 32, yF));
+    out = out.concat(kit.pageFooter(P, vm));
     if (data.length && vm.railOpen && !vm.inputsExpanded) {
-      var dataX = C.MARGIN + 32 + P.textWidth("APPS", 4) + 32;
-      out = out.concat(P.pxText("^ DATA", 4, kit.DIM, dataX, yF));
+      // DATA joins the legend pattern (owner, 2026-11-22): the caret
+      // sits in the chip's footprint — same slot x, vertically
+      // centred against the 22 px block row — and the word lands in
+      // the +32 word lane like every other option's. Grey, because
+      // it is a row cue, not a colour key.
+      var legend = kit.footWords(P, vm);
+      var last = legend[legend.length - 1];
+      var dataX = last[0] + 32 + P.textWidth(last[2], 4) + 32;
+      out = out.concat(P.pxText("^", 3, kit.DIM, dataX + 4, yF + 5));
+      out = out.concat(P.pxText("DATA", 4, kit.DIM, dataX + 32, yF));
     }
     var cue = "< HOME";
     out = out.concat(P.pxText(cue, 4, kit.DIM,

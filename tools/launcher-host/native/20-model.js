@@ -46,7 +46,7 @@
         // clock arms at boot, not at zero — a fresh home never starts
         // the window already expired.
         railOpen: true, lastAct: Date.now(),
-        overlay: false, overlayIndex: 0,
+        overlay: false, overlayIndex: 0, overlayEdit: false,
         settings: false, settingsPage: "root", settingsIndex: 0,
         nameDraft: "", nameIndex: 0, nameSourceId: null,
         now: new Date(), width: self.innerWidth || 1920,
@@ -252,6 +252,10 @@
         return lists.length ? lists : null;
       },
       overlayList: function () {
+        // ONE view (owner redesign, 2026-11-22): the grid shows every
+        // visible app; the pin state is read off the tiles themselves
+        // (the green rail number), not off a hidden second view. RED
+        // edits, it does not swap views.
         var groups = this.overlayGroups();
         if (!groups) return this.apps;
         // Anchor on this.apps so the flattened list stays in the same realm
@@ -260,6 +264,8 @@
         for (var i = 0; i < groups.length; i++) out = out.concat(groups[i].apps);
         return out;
       },
+      // The grid's section spans: owner-curated groups only. Pins are
+      // not a section — they are a number, wherever the app sits.
       overlaySpans: function () {
         var groups = this.overlayGroups();
         if (!groups) return null;
@@ -269,6 +275,19 @@
           start += groups[i].apps.length;
         }
         return spans;
+      },
+      // Pin truth for any surface that needs to say "pinned": the
+      // index in favorites (slot), or 0 when the app is not on the
+      // rail. One definition, read by the drawer number, the TTS,
+      // and the settings sub-line.
+      pinSlot: function (app) {
+        if (!app || app.appId == null) return 0;
+        var favs = (this.prefs && this.prefs.favorites) || [];
+        if (!Array.isArray(favs)) return 0;
+        for (var i = 0; i < favs.length; i++) {
+          if (String(favs[i]) === String(app.appId)) return i + 1;
+        }
+        return 0;
       },
       // Every valid reported app, unfiltered by preferences: the settings
       // list must show hidden apps or there would be no way to unhide them.
@@ -380,9 +399,17 @@
         // the render does: does that full name run past the lane?
         // (The one-word rule covers every OTHER block — those
         // never animate.)
-        if (this.idle || !this.railOpen || this.overlay || this.settings) return false;
-        var lab = "";
-        if (this.page === "home") {
+        if (this.idle || this.settings) return false;
+        if (!this.railOpen && !this.overlay) return false;
+        var lab = "", W = kit.LABEL_W;
+        if (this.overlay) {
+          // The drawer's focused tile walks the same beat, in a
+          // tighter u3 lane: same question, tighter lane.
+          var app = this.overlayList()[this.overlayIndex];
+          if (!app) return false;
+          lab = kit.text(app.appName).trim().toUpperCase();
+          W = 8;
+        } else if (this.page === "home") {
           var it = this.favoriteItems()[this.fav];
           lab = it ? kit.text(it.app && it.app.appName).trim().toUpperCase() : "";
         } else if (this.page === "inputs") {
@@ -393,7 +420,7 @@
         } else {
           return false;
         }
-        if (lab.length > kit.LABEL_W) return true; // a scroll to walk
+        if (lab.length > W) return true; // a scroll to walk
         // Even a full name that fits needs one repaint: the beat
         // ends at SCROLL_HOLD and the block opens from its word
         // into the full name — without a beat firing near that

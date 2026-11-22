@@ -42,7 +42,10 @@
           }
         } else if (this.overlay) {
           var app = this.overlayList()[this.overlayIndex];
-          label = app && kit.shortName(app.appName);
+          label = app && kit.shortName(app.appName) +
+            (this.overlayEdit
+              ? (this.pinSlot(app) ? ", OK unpins" : ", OK pins")
+              : "");
         } else if (this.page === "inputs") {
           var input = this.inputFocus();
           label = input && this.sourceName(input);
@@ -100,8 +103,20 @@
 
         if (this.overlay) {
           if (code === keys.BACK || code === keys.RETURN) { this.closeOverlay(); return true; }
-          if (code === keys.ENTER) { this.launchFocused(); return true; }
-          if (color === "red") { this.openStockSettings(); return true; }
+          // RED is EDIT, here exactly as it is on the rail: the ring
+          // turns red and OK now pins/unpins the focused tile instead
+          // of launching (owner redesign, 2026-11-22). One key, one
+          // meaning, everywhere.
+          if (color === "red") { this.toggleOverlayEdit(); return true; }
+          if (code === keys.ENTER) {
+            if (this.overlayEdit) this.pinFocused();
+            else this.launchFocused();
+            return true;
+          }
+          // YELLOW is a toggle, not just an opener: the foot legend
+          // reads the same in both directions, press it in apps mode
+          // and the grid goes away (owner, 2026-11-22).
+          if (color === "yellow") { this.closeOverlay(); return true; }
           var spans = this.overlaySpans();
           if (spans) {
             // Grouped navigation (issue #57): still one focus path over the
@@ -177,8 +192,12 @@
           // grid straight through the lid — the grid is the full page,
           // the lid stays down under it. RED lifts the rail AND enters
           // edit together: edit would otherwise steer tiles you
-          // cannot see.
+          // cannot see. GREEN is the vendor's TV sheet, BLUE opens
+          // this launcher's settings; both are full-page surfaces,
+          // so they punch through the closed lid too (owner 2026-11-22).
           if (color === "yellow") { this.openOverlay(); return true; }
+          if (color === "green") { this.openStockSettings(); return true; }
+          if (color === "blue") { this.openLauncherSettings(); return true; }
           if (color === "red") {
             if (this.page === "home") {
               this.openLid();
@@ -203,6 +222,11 @@
           return false; // no edit mode on P110: the vendor keeps its RED
         }
         if (color === "yellow") { this.openOverlay(); return true; }
+        // GREEN = the vendor's TV settings, BLUE = this launcher's
+        // settings page; bound on home and inputs, lid up (owner,
+        // 2026-11-22). The closed-lid twin lives in the lid block.
+        if (color === "green") { this.openStockSettings(); return true; }
+        if (color === "blue") { this.openLauncherSettings(); return true; }
 
         if (isNum) {
           var digit = kit.numKeys[code];
@@ -335,13 +359,20 @@
           this.clamp();
           return true;
         }
+        if (code === keys.UP) {
+          // In edit mode the vertical keys move the selected pin in the
+          // rail order (the picker page is gone; pins move where they
+          // are seen). Outside edit UP at the root stays the vendor's.
+          if (this.edit) { this.moveFavorite(this.fav, -1); return true; }
+          return false;
+        }
         if (code === keys.DOWN) {
+          if (this.edit) { this.moveFavorite(this.fav, 1); return true; }
           // DOWN is the rail's lid: it covers the row. The next key lifts
           // it (the lift consumes that key, so DOWN does not flip-flop).
           this.closeLid();
           return true;
         }
-        return false; // UP at the P100 root is the vendor's, like BACK
       }
     }
   };

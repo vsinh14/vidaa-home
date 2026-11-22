@@ -329,8 +329,36 @@
         if (!this.apps.length) { this.showToast("No apps reported"); return; }
         this.overlay = true;
         this.overlayIndex = 0;
+        // Every open starts calm; RED edits from there.
+        this.overlayEdit = false;
       },
-      closeOverlay: function () { this.overlay = false; },
+      closeOverlay: function () {
+        this.overlay = false;
+        this.overlayEdit = false;
+      },
+      // RED inside the grid: the SAME edit language as the rail
+      // (owner redesign, 2026-11-22). Red ring on the focused tile,
+      // a red cue line says what OK will do, RED exits. Focus does
+      // not jump — entering an edit never moves the selection, on
+      // the rail or in the grid.
+      toggleOverlayEdit: function () {
+        this.overlayEdit = !this.overlayEdit;
+        this.clamp();
+      },
+      // OK in grid edit: toggle the focused app's pin. The number
+      // appears or vanishes on the tile itself — the grid never
+      // closes and nothing moves underneath the finger.
+      pinFocused: function () {
+        var app = this.overlayList()[this.overlayIndex];
+        if (!app || app.appId == null) return;
+        this.togglePin(app);
+        var list = this.overlayList(), id = String(app.appId), idx = -1;
+        for (var i = 0; i < list.length; i++) {
+          if (String(list[i].appId) === id) { idx = i; break; }
+        }
+        this.overlayIndex = idx >= 0 ? idx : 0;
+        this.clamp();
+      },
       openLauncherSettings: function () {
         this.settings = true;
         this.settingsPage = "root";

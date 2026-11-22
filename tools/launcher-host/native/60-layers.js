@@ -14,38 +14,127 @@
     var out = [];
     out.push(P.box(0, 0, 1920, 1080, { backgroundColor: "rgba(0,0,0,0.94)" }));
     out = out.concat(P.pxText("APPS", 6, kit.INK, C.MARGIN, C.TOP));
-    var list = vm.overlayList();
-    out.push(P.mono(C.RIGHT - 240, 60, 200, 18, list.length + " APPS", kit.DIM, "right"));
 
+    // Pin truth = the rail's own number, in the rail's own top-right
+    // slot. The grid does not hide the pin state behind a second
+    // view: you see who is on the rail, and in what order, from
+    // inside the same grid (owner redesign, 2026-11-22).
+    var pinOf = {};
+    var favs = (vm.prefs && vm.prefs.favorites) || [];
+    for (var f = 0; f < favs.length; f++) pinOf[String(favs[f])] = f + 1;
+
+    var list = vm.overlayList();
     var spans = vm.overlaySpans();
     var pages = Math.max(1, Math.ceil(list.length / C.OPAGE));
     var page = Math.floor(vm.overlayIndex / C.OPAGE);
     var start = page * C.OPAGE;
     var end = Math.min(start + C.OPAGE, list.length);
+    var LW = 8;                       // u3 label lane in a 172 tile
     for (var j = start; j < end; j++) {
       var slot = j - start;
       var col = slot % C.OCOLS, row = Math.floor(slot / C.OCOLS);
       var x = C.OX + col * (C.OCW + C.OGAPX);
-      var y = C.OY + row * (C.OCH + C.OGAPY + 8);
+      var y = C.OY + row * (C.OCH + C.OGAPY);
       var app = list[j];
       var focused = j === vm.overlayIndex;
-      if (focused) out.push(P.box(x - 4, y - 4, C.OCW + 8, C.OCH + 8,
-        { border: "2px solid " + kit.INK }));
-      out.push(P.box(x + (C.OCW - 36) / 2, y + 16, 36, 36,
-        { backgroundColor: kit.tileFill(app.appName) }));
-      out.push(P.mono(x, y + 64, C.OCW, 20,
-        kit.shortName(app.appName).toUpperCase().slice(0, 14),
-        focused ? kit.INK : kit.DIM, "center"));
+      var full = kit.text(app.appName).trim().toUpperCase();
+      var fill = kit.tileFill(app.appName);
+      var ink = kit.inkFor(fill);
+
+      // Brand block, painted like a rail tile. Where the vendor
+      // carries an icon, it sits in the identity slot the rail's
+      // letter uses — one identity per block; without an icon the
+      // letter is the identity, exactly as on the rail.
+      var st = { backgroundColor: fill };
+      var icon = kit.text(app.appIcon).trim();
+      var hasIcon = /^https?:\/\//.test(icon);
+      if (hasIcon) {
+        st.backgroundImage = "url(\"" + icon.replace(/["\\]/g, "") + "\")";
+        st.backgroundSize = "56px 56px";
+        st.backgroundRepeat = "no-repeat";
+        st.backgroundPosition = "10px 10px";
+      }
+      out.push(P.box(x, y, C.OCW, C.OCH, st));
+      if (!hasIcon) {
+        out = out.concat(P.pxText(full ? full.slice(0, 1) : "?", 6, ink,
+          x + 12, y + 12));
+      }
+      var num = pinOf[String(app.appId)];
+      if (num) {
+        // The number is cut OUT of the block, teletext-stencil
+        // style (owner, 2026-11-22): a hard mini-block in the
+        // tile's own letter ink, and the digit punched through in
+        // the block's own brand colour. No launcher pigment sits
+        // on a brand block — the rail's rule, now kept here too —
+        // and the digit can never fail contrast, because ink and
+        // fill are the pair the palette already chose for each
+        // other.
+        var ns = String(num);
+        var nw = P.textWidth(ns, 4);
+        var bw = nw + 12;
+        var bx = x + C.OCW - 10 - bw, by = y + 10;
+        out.push(P.box(bx, by, bw, 40, { backgroundColor: ink }));
+        out = out.concat(P.pxText(ns, 4, fill, bx + 6, by + 6));
+      }
+
+      // The label lane, in the rail's language: every block shows
+      // ONE WORD, and the block the ring rests on reads the FULL
+      // name after the same beat — hold, then integer-cell walk
+      // through the padded name. Same clock (the drawer is its own
+      // lane in kit.selKey), same hold, same step.
+      var L = kit.tileLabel(full, kit.shortName(full));
+      var ly = y + C.OCH - 27;
+      var lab = L.full || L.word;
+      if (focused) {
+        var el = kit.phaseMs(vm);
+        if (el <= kit.SCROLL_HOLD) {
+          out = out.concat(P.pxText(L.word.slice(0, LW), 3, ink, x + 10, ly));
+        } else if (lab.length > LW) {
+          var cyc = lab + " ", per = cyc.length;
+          var s2 = Math.floor((el - kit.SCROLL_HOLD) / kit.SCROLL_MS);
+          s2 = ((s2 % per) + per) % per;
+          var win = "";
+          for (var wc = 0; wc < LW; wc++) win += cyc.charAt((s2 + wc) % per);
+          out = out.concat(P.pxText(win, 3, ink, x + 10, ly));
+        } else {
+          out = out.concat(P.pxText(lab, 3, ink, x + 10, ly));
+        }
+        out.push(P.ring(x, y, C.OCW, C.OCH, 4, vm.overlayEdit ? kit.RED : kit.INK));
+      } else {
+        out = out.concat(P.pxText(L.word.slice(0, LW), 3, ink, x + 10, ly));
+      }
+
       if (spans && j === spansHead(spans, j)) {
-        // Group labels are secondary chrome: grey tier, not a colour.
+        // Group labels are secondary chrome: grey tier, sitting in
+        // the vertical gap, never on a tile.
         out = out.concat(P.pxText(String(spansLabel(spans, j)).toUpperCase().slice(0, 16),
-          3, kit.DIM, x, Math.max(120, y - 20)));
+          3, kit.DIM, x, y - 24));
       }
     }
-    out.push(P.mono(C.MARGIN, 1006, 600, 16, "OK LAUNCH   BACK CLOSE   RED TV SETTINGS", kit.DIM));
-    if (pages > 1) {
-      out.push(P.mono(C.RIGHT - 240, 1006, 200, 16,
-        "PAGE " + (page + 1) + "/" + pages, kit.DIM, "right"));
+
+    // The foot, in the page language: only the door the grid can
+    // actually open — YELLOW is already named by the page it closes
+    // back to, so it earns no legend here (owner, 2026-11-22). The
+    // right-hand cue line states the mode; outside edit the cue slot
+    // carries the teletext page number instead — cyan, where P100
+    // wore its index.
+    var fy = C.FOOT_Y, fx = C.MARGIN;
+    out.push(P.chip(fx, fy + 3, kit.RED));
+    out = out.concat(P.pxText("EDIT", 4, kit.INK, fx + 32, fy));
+    if (vm.overlayEdit) {
+      var focusApp = list[vm.overlayIndex];
+      var fpin = focusApp && pinOf[String(focusApp.appId)];
+      var cue;
+      if (!fpin && favs.length >= kit.FAV_MAX)
+        cue = "UP DOWN MOVE   PINS FULL   RED EXIT";
+      else
+        cue = "UP DOWN MOVE   OK " + (fpin ? "UNPIN" : "PIN") + "   RED EXIT";
+      out = out.concat(P.pxText(cue, 4, kit.RED,
+        C.RIGHT - P.textWidth(cue, 4), C.FOOT_Y));
+    } else if (pages > 1) {
+      var pg = (page + 1) + "/" + pages;
+      out = out.concat(P.pxText(pg, 4, kit.CYAN,
+        C.RIGHT - P.textWidth(pg, 4), C.FOOT_Y));
     }
     return out;
   };
@@ -58,12 +147,11 @@
     return "";
   }
 
-  var SETTINGS_TITLES = { root: "HOME SETTINGS", apps: "APPS", favorites: "FAVORITES",
+  var SETTINGS_TITLES = { root: "HOME SETTINGS", apps: "APPS",
     inputs: "INPUT NAMES", name: "RENAME" };
   var SETTINGS_HINTS = {
     root: "UP DOWN MOVE  OK OPEN",
-    apps: "OK HIDE/SHOW  LEFT PIN",
-    favorites: "OK REMOVE  UP DOWN MOVE",
+    apps: "OK HIDE/SHOW",
     inputs: "OK RENAME",
     name: "BACK SAVES"
   };
@@ -78,36 +166,53 @@
 
   kit.renderSettings = function (P, vm) {
     var out = [];
+    var page = vm.settingsPage;
+    // The panel WRAPS ITS CONTENT (owner, 2026-11-22): height is
+    // header + the rows that exist + padding, capped at the old
+    // full-height panel, and the box re-centres vertically. A short
+    // list is a short box; only a list deeper than the cap scrolls.
+    var rowH = 76;
+    var maxVisible = Math.floor((C.SPH - 160) / rowH);
+    var rows = page === "name" ? [] : vm.settingsRows();
+    var visible = Math.min(rows.length, maxVisible);
+    var ph;
+    if (page === "name") {
+      var kbRows = Math.ceil(kit.KB_CELLS.length / kit.KB_COLS);
+      ph = 260 + kbRows * 80 + 24;
+    } else {
+      ph = 140 + visible * rowH + 40;
+    }
+    if (ph > C.SPH) ph = C.SPH;
+    var py = Math.round((1080 - ph) / 2);
     out.push(P.box(0, 0, 1920, 1080, { backgroundColor: "rgba(0,0,0,0.92)" }));
-    out.push(P.box(C.SPX, C.SPY, C.SPW, C.SPH, {
+    out.push(P.box(C.SPX, py, C.SPW, ph, {
       backgroundColor: "#000000",
       border: "2px solid " + kit.INK
     }));
-    var page = vm.settingsPage;
     out = out.concat(P.pxText(SETTINGS_TITLES[page] || "HOME SETTINGS", 6,
-      kit.INK, C.SPX + 36, C.SPY + 30));
-    out.push(P.mono(C.SPX + C.SPW - 620, C.SPY + 44, 584, 16,
+      kit.INK, C.SPX + 36, py + 30));
+    out.push(P.mono(C.SPX + C.SPW - 620, py + 44, 584, 16,
       SETTINGS_HINTS[page] || "", kit.DIM, "right"));
 
     if (page === "name") {
       // Draft line, then the 6x6 keyboard. Digits live in the keyboard,
       // not on the remote, because remote digits are the page numbers.
-      out.push(P.box(C.SPX + 24, C.SPY + 140, C.SPW - 48, 84, {
+      out.push(P.box(C.SPX + 24, py + 140, C.SPW - 48, 84, {
         backgroundColor: "#000000",
         border: "2px solid " + kit.GRID
       }));
-      out.push(P.box(C.SPX + 44, C.SPY + 140, C.SPW - 240, 84, {
+      out.push(P.box(C.SPX + 44, py + 140, C.SPW - 240, 84, {
         fontFamily: kit.MONO, fontSize: 34, lineHeight: 84, color: kit.INK,
         whiteSpace: "pre"
       }, [String(vm.nameDraft || ""), P.h("span", { style: { color: kit.AMBER } }, "\u258c")]));
-      out.push(P.mono(C.SPX + C.SPW - 224, C.SPY + 168, 180, 16,
+      out.push(P.mono(C.SPX + C.SPW - 224, py + 168, 180, 16,
         String((vm.nameDraft || "").length) + "/" + kit.NAME_MAX, kit.DIM, "right"));
       var cellW = Math.floor((C.SPW - 48 - 5 * 10) / kit.KB_COLS);
       for (var k = 0; k < kit.KB_CELLS.length; k++) {
         var cell = kit.KB_CELLS[k];
-        var col = k % kit.KB_COLS, row = Math.floor(k / kit.KB_COLS);
+        var col = k % kit.KB_COLS, kbRow = Math.floor(k / kit.KB_COLS);
         var cx = C.SPX + 24 + col * (cellW + 10);
-        var cy = C.SPY + 260 + row * 80;
+        var cy = py + 260 + kbRow * 80;
         var focused = k === vm.nameIndex;
         out.push(P.box(cx, cy, cellW, 72, {
           backgroundColor: "#000000",
@@ -119,9 +224,7 @@
       return out;
     }
 
-    var rows = vm.settingsRows();
-    var listY = C.SPY + 140, rowH = 76;
-    var visible = Math.floor((C.SPH - 160) / rowH);
+    var listY = py + 140;
     var first = Math.min(Math.max(0, vm.settingsIndex - visible + 1),
       Math.max(0, rows.length - visible));
     for (var i = first; i < Math.min(first + visible, rows.length); i++) {

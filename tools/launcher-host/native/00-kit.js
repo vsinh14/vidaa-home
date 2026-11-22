@@ -70,8 +70,16 @@
       // height keeps the P100 vertical anchors where they are.
       TILE_W: 257, TILE_H: TILE_H, RAIL_GAP: 12, RAIL_PAGE: 7,
       FOOT_Y: FOOT_Y,
-      OX: 220, OY: 180,                      // overlay grid origin (modal surface)
-      OCW: 196, OCH: 110, OGAPX: 18, OGAPY: 24, OCOLS: 7, OPAGE: 35,
+      // The drawer is the rail's grid, scaled: same language, same
+      // gap rhythm, so the eye reads one system. 10 x 172 + 9 x 12 =
+      // 1828 sits centred inside the margins; rows of 96 wear a 26px
+      // gap because the vertical lane carries group labels (u3 sits
+      // in the gap, never on a tile). One tile per visible app,
+      // rail-sized identity art, the rail's number slot, and the
+      // rail's label lane — the owner's "grid of rail components,
+      // much smaller to fit more" (2026-11-22).
+      OX: 46, OY: 132,                      // overlay grid origin (modal surface)
+      OCW: 172, OCH: 96, OGAPX: 12, OGAPY: 26, OCOLS: 10, OPAGE: 70,
       SPX: 360, SPY: 90, SPW: 1200, SPH: 900 // settings panel (modal surface)
     };
   }());
@@ -85,6 +93,7 @@
   kit.GREEN = "#35d435";   // live, on-values
   kit.RED = "#d43535";     // edit mode, danger
   kit.YELLOW = "#ffd200";  // chip-only accent
+  kit.BLUE = "#35a2ff";    // chip-only accent: launcher settings key
   kit.GRID = "#333333";    // port block border, no signal (green means live)
   kit.MONO = "'DejaVu Sans Mono','Noto Sans Mono','Droid Sans Mono','Courier New',monospace";
   kit.DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -220,6 +229,9 @@
   // new selection identity. Both ask the same function, so paint
   // and guard can never disagree, and no mutation site can forget.
   kit.selKey = function (vm) {
+    // The drawer is its own lane: the beat clock restarts when focus
+    // moves inside the grid, and a home beat never leaks into it.
+    if (vm.overlay) return (vm._phaseGen || 0) + "|a" + vm.overlayIndex;
     var lane = vm.page === "inputs"
       ? "i" + (vm.inputRow ? "p" + vm.inputSel : "d" + vm.inputDataSel)
       : "h" + vm.fav;
@@ -358,14 +370,14 @@
     }
     kit.numKeys = num;
     var cm = {};
-    var named = ["RED", "GREEN", "YELLOW", "COLOR_RED", "COLOR_GREEN", "COLOR_YELLOW",
-      "KEY_RED", "KEY_GREEN", "KEY_YELLOW"];
+    var named = ["RED", "GREEN", "YELLOW", "BLUE", "COLOR_RED", "COLOR_GREEN", "COLOR_YELLOW", "COLOR_BLUE",
+      "KEY_RED", "KEY_GREEN", "KEY_YELLOW", "KEY_BLUE"];
     for (var i = 0; i < named.length; i++) {
       if (k[named[i]] != null && !cm[k[named[i]]]) {
         cm[k[named[i]]] = named[i].replace(/^(COLOR_|KEY_)/, "").toLowerCase();
       }
     }
-    var raw = { 182: "red", 183: "green", 184: "yellow" };
+    var raw = { 182: "red", 183: "green", 184: "yellow", 185: "blue" };
     Object.keys(raw).forEach(function (code) {
       var n = Number(code);
       if (cm[n] == null) cm[n] = raw[code];
