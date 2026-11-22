@@ -26,6 +26,15 @@
         // fresh page always enters folded, focused on the ports row, so
         // entry focus is always the first port tile.
         inputDataSel: 0, inputRow: 1, inputsExpanded: false,
+        // Marquee plumbing: the beat clock is derived at consume
+        // time (kit.phaseMs keyed off the selection identity), so
+        // nothing here stamps it and no nav path can forget to.
+        // _phaseGen bumps only on lid travel, where the selection
+        // itself may not have changed but the visible moment has.
+        // mtick is the render's marquee dependency — the heartbeat
+        // bumps it only while a scroll is actually on screen, so
+        // the SoC never repaints for nobody.
+        mtick: 0,
         // The rail's lid: DOWN covers the row, 30 s of silence covers it,
         // any key lifts it again. The foot and header never hide. The
         // clock arms at boot, not at zero — a fresh home never starts
@@ -315,6 +324,15 @@
       closeLid: function () {
         this.railOpen = false;
         this.foldRows();
+        // The marquee beat belongs to the visible moment: the lid
+        // travel bumps the phase generation, so the next render
+        // after a reopen starts a fresh clock and reads word first,
+        // never caught mid-scroll (owner, 2026-11-22).
+        this._phaseGen = (this._phaseGen || 0) + 1;
+      },
+      openLid: function () {
+        this.railOpen = true;
+        this._phaseGen = (this._phaseGen || 0) + 1;
       },
       clamp: function () {
         var favLen = this.favoriteItems().length;
@@ -339,6 +357,33 @@
               Math.max(0, Math.min(this.settingsIndex, rows.length - 1)) : 0;
           }
         }
+      },
+      scrollActive: function () {
+        // Is a repaint worth it for the marquee? The ring block
+        // shows the FULL name, so the guard asks the same question
+        // the render does: does that full name run past the lane?
+        // (The one-word rule covers every OTHER block — those
+        // never animate.)
+        if (this.idle || !this.railOpen || this.overlay || this.settings) return false;
+        var lab = "";
+        if (this.page === "home") {
+          var it = this.favoriteItems()[this.fav];
+          lab = it ? kit.text(it.app && it.app.appName).trim().toUpperCase() : "";
+        } else if (this.page === "inputs") {
+          var input = this.inputFocus();
+          if (!input) return false;
+          lab = String(this.sourceName(input)).toUpperCase() ||
+            (kit.text(input.name) || "").toUpperCase();
+        } else {
+          return false;
+        }
+        if (lab.length > kit.LABEL_W) return true; // a scroll to walk
+        // Even a full name that fits needs one repaint: the beat
+        // ends at SCROLL_HOLD and the block opens from its word
+        // into the full name — without a beat firing near that
+        // moment the word would sit there stuck.
+        var word = kit.shortName(lab);
+        return word !== lab && kit.phaseMs(this) <= kit.SCROLL_HOLD + kit.SCROLL_MS;
       }
     }
   };

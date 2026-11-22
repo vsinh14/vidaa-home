@@ -99,8 +99,53 @@
       out = out.concat(P.pxText(t.letter, 11, t.letterInk, x + 12, ry + 10));
       if (t.num) out = out.concat(P.pxText(t.num, 4, t.numInk,
         x + C.TILE_W - 14 - P.textWidth(t.num, 4), ry + 14));
-      if (t.label) out = out.concat(P.pxText(t.label, 4, t.labelInk,
-        x + 12, ry + C.TILE_H - 44));
+      if (t.labelFull || t.labelWord) {
+        // The label lane (owner-locked, 2026-11-22): every block
+        // shows ONE WORD; the block the ring rests on shows the
+        // FULL name — static when 11 chars fill the lane,
+        // scrolling through the whole name when it runs past.
+        var L = kit.tileLabel(t.labelFull, t.labelWord);
+        var LW = kit.LABEL_W;
+        if (idx === sel && ringOn !== false) {
+          var lab = L.full || L.word;
+          // The beat clock is DERIVED: kit.phaseMs starts it the
+          // first time this very selection identity is consumed —
+          // this render IS the arrival. One clock shared with the
+          // repaint guard; no nav path can arrive un-stamped, and
+          // one-word names (Crunchyroll: the word is the whole
+          // name) get the same hold as any other.
+          var el = kit.phaseMs(vm);
+          if (el <= kit.SCROLL_HOLD) {
+            // The settling beat is unconditional and belongs to
+            // the RING: a fresh selection reads as its one word
+            // (its head, when even the word runs past the lane)
+            // for the first second whatever the name length is —
+            // the whole page reads as a row of words, then the
+            // named block opens into its full name
+            // (owner, 2026-11-22).
+            out = out.concat(P.pxText(L.word.slice(0, LW), 4, t.labelInk,
+              x + 12, ry + C.TILE_H - 44));
+          } else if (lab.length > LW) {
+            // Past the beat: walk the whole name. One char per
+            // step, loop through the padded name and back to the
+            // head. Integer cells only — the pixel face never
+            // sub-pixels. The beat WAS the head pause.
+            var cyc = lab + " ";
+            var per = cyc.length;
+            var st = Math.floor((el - kit.SCROLL_HOLD) / kit.SCROLL_MS);
+            st = ((st % per) + per) % per;
+            var win = "";
+            for (var wc = 0; wc < LW; wc++) win += cyc.charAt((st + wc) % per);
+            out = out.concat(P.pxText(win, 4, t.labelInk,
+              x + 12, ry + C.TILE_H - 44));
+          } else {
+            out = out.concat(P.pxText(lab, 4, t.labelInk, x + 12, ry + C.TILE_H - 44));
+          }
+        } else {
+          out = out.concat(P.pxText(L.word.slice(0, LW), 4, t.labelInk,
+            x + 12, ry + C.TILE_H - 44));
+        }
+      }
       if (idx === sel && ringOn !== false) out.push(P.ring(x, ry, C.TILE_W, C.TILE_H, 4, t.ring || kit.INK));
     }
     return out;
@@ -116,17 +161,22 @@
     // page, where it means something.
 
     // Brand blocks: the fill carries the colour decision, the railRow
-    // carries everything else.
+    // carries everything else. No numbers: the P1xx page codes were
+    // pattern bookkeeping, not app truth — the letter and the name
+    // already say everything (owner, 2026-11-22).
     var items = vm.favoriteItems();
     var tiles = [];
     for (var n = 0; n < items.length; n++) {
       var it = items[n];
+      // One WORD sits on an unselected block (shortName, as ever);
+      // the ring block reads the full name — railRow decides.
+      var full = kit.text(it.app && it.app.appName).trim().toUpperCase();
       tiles.push({
         style: { backgroundColor: it.fill },
-        letter: String(it.label || "?").toUpperCase().slice(0, 1),
+        letter: full ? full.slice(0, 1) : "?",
         letterInk: it.ink,
-        num: String(101 + n), numInk: it.ink,
-        label: String(it.label || "").toUpperCase().slice(0, 8),
+        num: "",
+        labelFull: full.slice(0, 60),
         labelInk: it.ink,
         ring: vm.edit ? kit.RED : kit.INK
       });
@@ -179,7 +229,8 @@
         letterInk: ink,
         num: named ? pname.slice(0, 6) : "",
         numInk: live ? kit.GREEN : kit.FAINT,
-        label: (custom || pname || "").slice(0, 8),
+        labelFull: (custom || pname || "").slice(0, 60),
+        labelWord: kit.shortName(custom || pname || ""),
         labelInk: ink
       };
     }

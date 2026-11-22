@@ -66,6 +66,12 @@
               d.getDate() !== vm.now.getDate()) {
             vm.now = d;
           }
+          // A long name scrolling under the ring wants a finer
+          // repaint than the minute-grained clock. mtick is the
+          // render's marquee dependency: bump it only while a
+          // scroll is actually on screen — the SoC never repaints
+          // for nobody.
+          if (vm.scrollActive()) vm.mtick++;
           if (vm.idleAt && !vm.idle && nowMs >= vm.idleAt) {
             vm.enterIdle();
           }
@@ -81,6 +87,14 @@
             vm.toastUntil = 0;
           }
         }, 1000);
+        // Marquee beat: a long name scrolling under the ring wants a
+        // finer repaint than the one-second clock. The beat is
+        // always scheduled but free when idle — scrollActive() is a
+        // pure string check, and the reactive bump only happens
+        // while a scroll is actually on screen.
+        this._marquee = setInterval(function () {
+          if (vm.scrollActive()) vm.mtick++;
+        }, kit.SCROLL_MS);
         this._resize = function () { vm.width = self.innerWidth || 1920; };
         if (self.addEventListener) self.addEventListener("resize", this._resize);
         this.routeFocus();
@@ -103,6 +117,7 @@
         this._payloadReceived = false;
         if (this._platform) this._platform.stop();
         clearInterval(this._clock);
+        clearInterval(this._marquee);
         if (this._autoSwitchTimer) {
           clearTimeout(this._autoSwitchTimer);
           this._autoSwitchTimer = null;

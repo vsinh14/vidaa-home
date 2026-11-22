@@ -203,6 +203,8 @@
   };
 
   kit.renderAll = function (vm, h) {
+    vm.mtick; // marquee re-render dependency: the heartbeat bumps it
+              // while a long name is scrolling, and Vue repaints.
     var scale = (Number(vm.width) || 1920) / 1920;
     var P = kit.makePaint(h, scale);
     var kids = [];

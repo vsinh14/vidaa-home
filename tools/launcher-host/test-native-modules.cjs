@@ -438,4 +438,60 @@ const scaled = opts.render.call(v, fakeH);
 assert.ok(scaled.style.width === '100%');
 v.width = 1920;
 
+// Marquee: names longer than the lane (kit.LABEL_W chars at u4)
+// scroll only while the ring rests on them. The heartbeat guard is
+// a pure string check and stays asleep when the focused name fits;
+// clamp restamps the phase only when the ring actually moves.
+assert.equal(kitK.LABEL_W, 9, 'nine chars fill the 257 tile lane at u4');
+v.idle = false; v.page = 'home'; v.railOpen = true; v.edit = false;
+v.prefs.favorites = ['netflix', 'browser'];
+v.fav = 0; v.clamp();
+assert.equal(v.scrollActive(), false, 'short favorite names fit the lane');
+v.prefs.favorites = ['yt', 'netflix'];  // "YouTube: Watch" is 14 chars
+v.fav = 0; v.clamp();
+assert.equal(v.scrollActive(), true, 'long favorite name scrolls under the ring');
+// The settling beat belongs to the RING, not the scroll: a name
+// that FITS the lane still opens from its word, so the guard must
+// stay awake near the beat end, then sleep. "Prime Max" is 9 —
+// exactly the lane, two words, so nothing scrolls.
+var netApp = null; for (var ai = 0; ai < v.apps.length; ai++) { if (String(v.apps[ai].appId) === 'netflix') netApp = v.apps[ai]; }
+if (!netApp) throw new Error('netflix app missing from test fixture');
+netApp.appName = 'Prime Max';
+v.prefs.favorites = ['netflix', 'yt'];
+v.fav = 0;                               // no stamp: the clock derives itself
+assert.equal(v.scrollActive(), true, 'beat running: opening frame pending');
+v._phase.t0 -= 5000;                     // beat long over
+assert.equal(v.scrollActive(), false, 'settled full name: guard sleeps');
+const homeScroll = opts.render.call(v, fakeH);
+assert.ok(homeScroll.count > 100, 'marquee frame renders, got ' + homeScroll.count);
+v.enterInputs();
+v.railOpen = true;
+assert.equal(v.scrollActive(), false, 'ports lane focus: HDMI1 fits the lane');
+v.prefs.customNames = { '7': 'NETFLIX CASTING APP' };
+v.inputRow = 0; v.inputDataSel = 0; v.clamp();
+assert.equal(v.scrollActive(), true, 'renamed data tile overflows: guard wakes');
+v.prefs.customNames = {};
+v.clamp();
+assert.equal(v.scrollActive(), false, 'plain TV name: guard sleeps again');
+// Phase discipline WITHOUT stamps: the clock follows the selection
+// identity, render and guard share one clock, and lid travel restarts
+// it — reopening never catches a scroll mid-name.
+v.inputRow = 1; v.inputSel = 0;
+var kA = kitK.selKey(v);
+kitK.phaseMs(v); var tA = v._phase.t0;
+kitK.phaseMs(v);
+assert.equal(v._phase.key, kA, 'held ring: same clock');
+assert.equal(v._phase.t0, tA, 'held ring: phase untouched');
+v.inputSel = 1;
+assert.notEqual(kitK.selKey(v), kA, 'ring move retargets the phase key');
+kitK.phaseMs(v);
+assert.equal(v._phase.key, kitK.selKey(v), 'new ring position takes the new clock');
+var kB = kitK.selKey(v);
+v.railOpen = true; v.closeLid();
+assert.equal(v.railOpen, false, 'closeLid drops the lid');
+v.openLid();
+assert.equal(v.railOpen, true, 'openLid lifts the lid');
+assert.notEqual(kitK.selKey(v), kB, 'lid travel retargets the clock');
+assert.ok(kitK.phaseMs(v) < 50, 'reopened: clock starts fresh at zero');
+
 console.log('PASS: native/ modules boot, navigate, persist, and render');

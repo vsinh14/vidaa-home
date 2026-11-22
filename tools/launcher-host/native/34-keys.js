@@ -155,11 +155,11 @@
           // selects, launches or opens through a closed lid.
           if (code === keys.RIGHT) {
             if (this.page === "home") { this.enterInputs(); return true; }
-            this.railOpen = true; return true;   // no next page: show them where they are
+            this.openLid(); return true;   // no next page: show them where they are
           }
           if (code === keys.LEFT) {
             if (this.page === "inputs") { this.page = "home"; this.clamp(); return true; }
-            this.railOpen = true; return true;   // no previous page: same
+            this.openLid(); return true;   // no previous page: same
           }
           if (code === keys.BACK || code === keys.RETURN) {
             if (this.page === "inputs") { this.page = "home"; this.clamp(); return true; }
@@ -173,7 +173,7 @@
           if (color === "yellow") { this.openOverlay(); return true; }
           if (color === "red") {
             if (this.page === "home") {
-              this.railOpen = true;
+              this.openLid();
               this.toggleEdit();
               return true;
             }
@@ -181,7 +181,7 @@
           }
           // Everything else lifts the rail, the vendor's UP included;
           // the lift is that key's whole job.
-          this.railOpen = true;
+          this.openLid();
           return true;
         }
 

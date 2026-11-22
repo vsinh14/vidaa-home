@@ -17,7 +17,10 @@
   var kit = self.AlvidaaNativeKit = self.AlvidaaNativeKit || {};
 
   // ---- stage geometry (1920x1080 stage units; paint rounds to device px) --
-  kit.FAV_MAX = 18;          // three rail blocks of six
+  kit.FAV_MAX = 18;          // pinned cap: 7-up pages, pages need not be full
+  kit.LABEL_W = 9;           // label chars fitting the 257 tile's lane at u4
+  kit.SCROLL_MS = 333;       // marquee step: ~3 chars/s, integer cells stay sharp
+  kit.SCROLL_HOLD = 1000;    // head hold before the scroll starts
   kit.KB_COLS = 6;
   kit.KB_CELLS = (function () {
     var cells = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
@@ -60,7 +63,11 @@
       SUPER_FOOT_Y: SUPER_FOOT_Y,          // superblock with the lid closed
       RAIL_X: PAD, RAIL_Y: RAIL_Y, RAIL2_Y: RAIL2_Y, // data row above ports
       SUPER_EXP_Y: SUPER_EXP_Y,        // superblock, expanded Inputs
-      TILE_W: 302, TILE_H: TILE_H, RAIL_GAP: 12, RAIL_PAGE: 6,
+      // Tiles sized for a 7-up page: 7x257 + 6x12 = 1871 <= the
+      // 1872 the margins leave (was 6x302). The tight-gap design
+      // language is kept, so the width gives, not the gap; the
+      // height keeps the P100 vertical anchors where they are.
+      TILE_W: 257, TILE_H: TILE_H, RAIL_GAP: 12, RAIL_PAGE: 7,
       FOOT_Y: FOOT_Y,
       OX: 220, OY: 180,                      // overlay grid origin (modal surface)
       OCW: 196, OCH: 110, OGAPX: 18, OGAPY: 24, OCOLS: 7, OPAGE: 35,
@@ -188,6 +195,39 @@
     var t = String(name || "").trim();
     var m = t.split(/[\s:]/)[0];
     return m || t;
+  };
+  // The tile label rule, in ONE place (owner, 2026-11-22): an
+  // unselected block shows one WORD — the first word of the name,
+  // as it always has. The block the ring rests on shows the FULL
+  // name after a one-second beat in the same word, static when
+  // 11 chars fill the lane, scrolling through the whole name when
+  // it runs past them. Returns { word, full }.
+  kit.tileLabel = function (full, word) {
+    var f = String(full == null ? "" : full).toUpperCase();
+    var w = String(word == null ? "" : word).toUpperCase();
+    if (!w) w = kit.shortName(f);
+    return { word: w, full: f };
+  };
+
+  // Marquee phase, ONE source of truth (owner, 2026-11-22, after the
+  // Crunchyroll drift): the beat clock is not stamped by whoever
+  // mutates the selection — that was a convention every nav path
+  // had to honour, and paths that changed page or lane quietly (or
+  // names where the one word IS the whole name, like Crunchyroll)
+  // drifted. Instead the clock starts the first time a CONSUMER
+  // (the render painting the ring, or the repaint guard) sees a
+  // new selection identity. Both ask the same function, so paint
+  // and guard can never disagree, and no mutation site can forget.
+  kit.selKey = function (vm) {
+    var lane = vm.page === "inputs"
+      ? "i" + (vm.inputRow ? "p" + vm.inputSel : "d" + vm.inputDataSel)
+      : "h" + vm.fav;
+    return (vm._phaseGen || 0) + "|" + lane;
+  };
+  kit.phaseMs = function (vm) {
+    var now = Date.now(), k = kit.selKey(vm);
+    if (!vm._phase || vm._phase.key !== k) vm._phase = { key: k, t0: now };
+    return now - vm._phase.t0;
   };
   kit.trunc = function (value, n) {
     var t = String(value == null ? "" : value);
