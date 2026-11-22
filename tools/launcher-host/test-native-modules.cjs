@@ -430,7 +430,14 @@ v.page = 'inputs';
 assert.ok(opts.render.call(v, fakeH).count > 120);
 v.page = 'home';
 v.overlay = true;
-assert.ok(opts.render.call(v, fakeH).count > home.count);
+const drawerNode = opts.render.call(v, fakeH);
+assert.ok(drawerNode.count > 250, 'drawer renders its own full scene, got ' + drawerNode.count);
+// The page under a full-screen flat ground is NOT painted: the
+// drawer scene must be cheaper than the home page it replaces,
+// every marquee beat (review, 2026-11-22).
+assert.ok(drawerNode.count < home.count,
+  'page under the drawer ground must not be rendered: ' +
+  drawerNode.count + ' vs home ' + home.count);
 v.overlay = false;
 v.openLauncherSettings();
 assert.ok(opts.render.call(v, fakeH).count > 60);

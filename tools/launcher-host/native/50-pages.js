@@ -1,11 +1,11 @@
 /* Module 50 — the pages.
  *
  * P100 (Home): clock and date in the pixel face, the wallpaper band, and the brand-
- * block rail — six blocks, numbered 101..118, the brand fill
- * carrying the tile and white/red ring chrome carrying the launcher.
- * No page numbers in the corner: they are our vocabulary, not the
- * viewer's. The corner carries the plain words HOME and INPUTS in the
- * same cyan u7 slot; the foot cues say INPUTS/HOME too, in amber.
+ * block rail — seven-up, the brand fill carrying the tile and
+ * white/red ring chrome carrying the launcher. The rail wears no
+ * numbers: the digits live on the remote. The corner carries the
+ * plain words HOME and INPUTS in the cyan slot; the foot cues point
+ * at the other page.
  *
  * P110 (Inputs): the same frame, a 12-tile port
  * grid with live dots and digit numbers, the cue pointing back.
@@ -150,40 +150,12 @@
         var L = kit.tileLabel(t.labelFull, t.labelWord);
         var LW = kit.LABEL_W;
         if (idx === sel && ringOn !== false) {
-          var lab = L.full || L.word;
-          // The beat clock is DERIVED: kit.phaseMs starts it the
-          // first time this very selection identity is consumed —
-          // this render IS the arrival. One clock shared with the
-          // repaint guard; no nav path can arrive un-stamped, and
-          // one-word names (Crunchyroll: the word is the whole
-          // name) get the same hold as any other.
-          var el = kit.phaseMs(vm);
-          if (el <= kit.SCROLL_HOLD) {
-            // The settling beat is unconditional and belongs to
-            // the RING: a fresh selection reads as its one word
-            // (its head, when even the word runs past the lane)
-            // for the first second whatever the name length is —
-            // the whole page reads as a row of words, then the
-            // named block opens into its full name
-            // (owner, 2026-11-22).
-            out = out.concat(P.pxText(L.word.slice(0, LW), 4, t.labelInk,
-              x + 12, ry + C.TILE_H - 44));
-          } else if (lab.length > LW) {
-            // Past the beat: walk the whole name. One char per
-            // step, loop through the padded name and back to the
-            // head. Integer cells only — the pixel face never
-            // sub-pixels. The beat WAS the head pause.
-            var cyc = lab + " ";
-            var per = cyc.length;
-            var st = Math.floor((el - kit.SCROLL_HOLD) / kit.SCROLL_MS);
-            st = ((st % per) + per) % per;
-            var win = "";
-            for (var wc = 0; wc < LW; wc++) win += cyc.charAt((st + wc) % per);
-            out = out.concat(P.pxText(win, 4, t.labelInk,
-              x + 12, ry + C.TILE_H - 44));
-          } else {
-            out = out.concat(P.pxText(lab, 4, t.labelInk, x + 12, ry + C.TILE_H - 44));
-          }
+          // The beat and the walk live in kit.labelPaint — the rail
+          // and the drawer are one language and must not be two
+          // implementations; the lane width here and the guard's
+          // lane read the same constants.
+          out = out.concat(kit.labelPaint(P, vm, L, t.labelInk,
+            x + 12, ry + C.TILE_H - 44, 4, LW));
         } else {
           out = out.concat(P.pxText(L.word.slice(0, LW), 4, t.labelInk,
             x + 12, ry + C.TILE_H - 44));
@@ -232,13 +204,10 @@
     if (!vm.zen) {
       out = out.concat(kit.pageFooter(P, vm));
       if (vm.edit) {
-        var editCue = "UP DOWN MOVE   OK REMOVE   RED EXIT";
-        out = out.concat(P.pxText(editCue, 4, kit.RED,
-          C.RIGHT - P.textWidth(editCue, 4), C.FOOT_Y));
+        out = out.concat(kit.rightFoot(P,
+          "UP DOWN MOVE   OK REMOVE   RED EXIT", kit.RED, C.FOOT_Y));
       } else {
-        var cue = "INPUTS >";
-        out = out.concat(P.pxText(cue, 4, kit.DIM,
-          C.RIGHT - P.textWidth(cue, 4), C.FOOT_Y));
+        out = out.concat(kit.rightFoot(P, "INPUTS >", kit.DIM, C.FOOT_Y));
       }
     }
     return out;
@@ -315,9 +284,7 @@
       out = out.concat(P.pxText("^", 3, kit.DIM, dataX + 4, yF + 5));
       out = out.concat(P.pxText("DATA", 4, kit.DIM, dataX + 32, yF));
     }
-    var cue = "< HOME";
-    out = out.concat(P.pxText(cue, 4, kit.DIM,
-      C.RIGHT - P.textWidth(cue, 4), yF));
+    out = out.concat(kit.rightFoot(P, "< HOME", kit.DIM, yF));
     return out;
   };
 }(self));

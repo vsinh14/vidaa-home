@@ -19,6 +19,7 @@
   // ---- stage geometry (1920x1080 stage units; paint rounds to device px) --
   kit.FAV_MAX = 18;          // pinned cap: 7-up pages, pages need not be full
   kit.LABEL_W = 9;           // label chars fitting the 257 tile's lane at u4
+  kit.OVERLAY_LABEL_W = 8;   // the same lane in the 172 drawer tile at u3
   kit.SCROLL_MS = 333;       // marquee step: ~3 chars/s, integer cells stay sharp
   kit.SCROLL_HOLD = 1000;    // head hold before the scroll starts
   kit.ZEN_MS = 5000;         // chrome-free mode 5 s after the lid collapses (owner 2026-11-22)
@@ -144,19 +145,37 @@
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   };
   // The block colour for a tile: the brand hex when it is strong enough to
-  // be a block, a raised hash hue when the brand is near-black.
-  kit.tileFill = function (name) {
-    var c = kit.brandOf(name);
-    if (/^#[0-9a-fA-F]{6}$/.test(c) && kit.hexLum(c) < 0.18) {
-      return "hsl(" + kit.hue(String(name || "")) + ", 50%, 42%)";
-    }
-    return c;
-  };
-  // Black or white for type sitting directly on a block fill.
-  kit.inkFor = function (fill) {
-    if (/^#[0-9a-fA-F]{6}$/.test(fill) && kit.hexLum(fill) > 0.45) return "#000000";
-    return "#ffffff";
-  };
+  // be a block, a raised hash hue when the brand is near-black. Memoised:
+  // the whole tree rebuilds every keypress AND every 333 ms marquee beat,
+  // and tileFill is up to 17 regexes plus a char loop per tile per beat —
+  // the brand of a name never changes mid-session, so this is arithmetic
+  // the model's "decided once" philosophy owes the render path.
+  kit.tileFill = (function () {
+    var memo = {};
+    return function (name) {
+      var key = String(name || "");
+      var hit = memo[key];
+      if (hit !== undefined) return hit;
+      var c = kit.brandOf(key);
+      var r = (/^#[0-9a-fA-F]{6}$/.test(c) && kit.hexLum(c) < 0.18)
+        ? "hsl(" + kit.hue(key) + ", 50%, 42%)" : c;
+      memo[key] = r;
+      return r;
+    };
+  })();
+  // Black or white for type sitting directly on a block fill. Memoised
+  // for the same reason; fills come from a small closed set.
+  kit.inkFor = (function () {
+    var memo = {};
+    return function (fill) {
+      var hit = memo[fill];
+      if (hit !== undefined) return hit;
+      var r = (/^#[0-9a-fA-F]{6}$/.test(fill) && kit.hexLum(fill) > 0.45)
+        ? "#000000" : "#ffffff";
+      memo[fill] = r;
+      return r;
+    };
+  })();
   kit.signalOf = function (input) {
     var value = input.is_signal != null ? input.is_signal : input.has_signal;
     return value === 1 || value === "1" || value === true;
@@ -217,6 +236,48 @@
     var w = String(word == null ? "" : word).toUpperCase();
     if (!w) w = kit.shortName(f);
     return { word: w, full: f };
+  };
+  // The focused block's label lane, ONCE (review, 2026-11-22): the
+  // rail and the drawer are the same language, and two verbatim
+  // copies of this hold-then-walk block — each with its own lane
+  // width pasted in — was the tree's biggest drift vector: the
+  // guard's lane (scrollActive) and the paint's lane must agree or
+  // a word sticks forever / a repaint loop spins, the exact
+  // Crunchyroll class of bug. Painters pass their own unit/LW/x/y;
+  // only the algorithm lives here.
+  kit.labelPaint = function (P, vm, L, ink, x, y, unit, LW) {
+    var lab = L.full || L.word;
+    var el = kit.phaseMs(vm);
+    // The settling beat belongs to the RING: a fresh selection
+    // reads as its one word (its head, when even the word runs
+    // past the lane) for the first second whatever the length is.
+    if (el <= kit.SCROLL_HOLD)
+      return P.pxText(L.word.slice(0, LW), unit, ink, x, y);
+    if (lab.length <= LW) return P.pxText(lab, unit, ink, x, y);
+    // Past the beat: one char per step through the padded name
+    // and back to the head. Integer cells only.
+    var cyc = lab + " ", per = cyc.length;
+    var st = Math.floor((el - kit.SCROLL_HOLD) / kit.SCROLL_MS);
+    st = ((st % per) + per) % per;
+    var win = "";
+    for (var w = 0; w < LW; w++) win += cyc.charAt((st + w) % per);
+    return P.pxText(win, unit, ink, x, y);
+  };
+  // chip + word pair, and where the next pair starts — the 32-gap
+  // rhythm of the foot legend, in one place (two renderers hand-
+  // rolled it).
+  kit.chipWord = function (P, x, y, color, word) {
+    return {
+      nodes: [P.chip(x, y + 3, color)]
+        .concat(P.pxText(word, 4, kit.INK, x + 32, y)),
+      next: x + 32 + P.textWidth(word, 4) + 32
+    };
+  };
+  // The right-hand cue slot of the teletext frame, in one place
+  // (three callers hand-rolled the RIGHT - textWidth arithmetic).
+  kit.rightFoot = function (P, text, color, y) {
+    return P.pxText(text, 4, color,
+      kit.C.RIGHT - P.textWidth(text, 4), y);
   };
 
   // Marquee phase, ONE source of truth (owner, 2026-11-22, after the

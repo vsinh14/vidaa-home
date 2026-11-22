@@ -93,10 +93,11 @@
       return out;
     }
 
-    // Real monospace for the dense lists (overlay cells, settings rows,
-    // the name keyboard): readable at 20px+, and the doubling softens
-    // these into ordinary slightly-soft text, which is acceptable for
-    // 40-character lists — the chrome type that must stay crisp uses px.
+    // Real monospace for the dense lists (settings rows and the
+    // name keyboard): readable at 20px+, and the doubling softens
+    // these into ordinary slightly-soft text, which is acceptable
+    // for 40-character lists — the chrome type that must stay crisp
+    // uses px.
     function mono(x, y, width, size, value, color, align) {
       return box(x, y, width, Math.round(size * 1.4), {
         fontFamily: kit.MONO,

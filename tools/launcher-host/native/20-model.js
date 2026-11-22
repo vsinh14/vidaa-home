@@ -278,16 +278,24 @@
       },
       // Pin truth for any surface that needs to say "pinned": the
       // index in favorites (slot), or 0 when the app is not on the
-      // rail. One definition, read by the drawer number, the TTS,
-      // and the settings sub-line.
+      // rail. One map, read by the drawer number, the TTS, and the
+      // settings sub-line — three former hand-rolled definitions,
+      // two of which matched on id-OR-name and would disagree with
+      // the rail itself (which matches on id) if a legacy name-entry
+      // ever sat in the pref. Favourites are written as ids; ids are
+      // the canonical form, and every surface now agrees.
+      pinMap: function () {
+        var favs = (this.prefs && this.prefs.favorites) || [];
+        var map = {};
+        if (Array.isArray(favs)) {
+          for (var i = 0; i < favs.length; i++)
+            map[String(favs[i])] = i + 1;
+        }
+        return map;
+      },
       pinSlot: function (app) {
         if (!app || app.appId == null) return 0;
-        var favs = (this.prefs && this.prefs.favorites) || [];
-        if (!Array.isArray(favs)) return 0;
-        for (var i = 0; i < favs.length; i++) {
-          if (String(favs[i]) === String(app.appId)) return i + 1;
-        }
-        return 0;
+        return this.pinMap()[String(app.appId)] || 0;
       },
       // Every valid reported app, unfiltered by preferences: the settings
       // list must show hidden apps or there would be no way to unhide them.
@@ -408,7 +416,7 @@
           var app = this.overlayList()[this.overlayIndex];
           if (!app) return false;
           lab = kit.text(app.appName).trim().toUpperCase();
-          W = 8;
+          W = kit.OVERLAY_LABEL_W;
         } else if (this.page === "home") {
           var it = this.favoriteItems()[this.fav];
           lab = it ? kit.text(it.app && it.app.appName).trim().toUpperCase() : "";

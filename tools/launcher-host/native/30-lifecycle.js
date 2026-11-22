@@ -347,16 +347,14 @@
       },
       // OK in grid edit: toggle the focused app's pin. The number
       // appears or vanishes on the tile itself — the grid never
-      // closes and nothing moves underneath the finger.
+      // closes and nothing moves underneath the finger. (The old
+      // focus-follow-the-app scan was a relic of the pinned-view
+      // era: the single view never reorders on pin, so the index
+      // cannot move.)
       pinFocused: function () {
         var app = this.overlayList()[this.overlayIndex];
         if (!app || app.appId == null) return;
         this.togglePin(app);
-        var list = this.overlayList(), id = String(app.appId), idx = -1;
-        for (var i = 0; i < list.length; i++) {
-          if (String(list[i].appId) === id) { idx = i; break; }
-        }
-        this.overlayIndex = idx >= 0 ? idx : 0;
         this.clamp();
       },
       openLauncherSettings: function () {

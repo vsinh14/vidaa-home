@@ -1,9 +1,13 @@
 /* Module 60 — overlay, settings, idle, chrome, and the frame.
  *
- * The apps grid (7x5 = 35 per page) with brand badges and mono names,
- * the Launcher settings panel (2px sharp-cornered white frame, mono
- * rows, pixel title), the idle clock layer, the toast, and the
- * auto-switch countdown — then renderAll() composes the root.
+ * The apps grid — a page of rail components at 0.67 scale (10x7, 70
+ * per page), brand-painted tiles, logos in the identity slot, the
+ * pixel face and the rail's label beat throughout — the Launcher
+ * settings panel (2px sharp-cornered white frame, mono rows, pixel
+ * title), the idle clock layer, the toast, and the auto-switch
+ * countdown. renderAll() composes the root, and under a full-screen
+ * ground it composes ONLY the ground: the page beneath is not
+ * painted at all.
  */
 (function (self) {
   "use strict";
@@ -12,16 +16,20 @@
 
   kit.renderOverlay = function (P, vm) {
     var out = [];
-    out.push(P.box(0, 0, 1920, 1080, { backgroundColor: "rgba(0,0,0,0.94)" }));
+    // True-black flat ground (owner: "near-black flat") — and since
+    // renderAll skips the page under the overlay entirely, it is
+    // genuinely flat: nothing ghosts through at 6% any more.
+    out.push(P.box(0, 0, 1920, 1080, { backgroundColor: "#000000" }));
     out = out.concat(P.pxText("APPS", 6, kit.INK, C.MARGIN, C.TOP));
 
     // Pin truth = the rail's own number, in the rail's own top-right
     // slot. The grid does not hide the pin state behind a second
     // view: you see who is on the rail, and in what order, from
-    // inside the same grid (owner redesign, 2026-11-22).
-    var pinOf = {};
+    // inside the same grid (owner redesign, 2026-11-22). The map is
+    // the model's one definition — the renderer used to keep its
+    // own copy.
     var favs = (vm.prefs && vm.prefs.favorites) || [];
-    for (var f = 0; f < favs.length; f++) pinOf[String(favs[f])] = f + 1;
+    var pinOf = vm.pinMap();
 
     var list = vm.overlayList();
     var spans = vm.overlaySpans();
@@ -29,7 +37,7 @@
     var page = Math.floor(vm.overlayIndex / C.OPAGE);
     var start = page * C.OPAGE;
     var end = Math.min(start + C.OPAGE, list.length);
-    var LW = 8;                       // u3 label lane in a 172 tile
+    var LW = kit.OVERLAY_LABEL_W; // u3 label lane in a 172 tile
     for (var j = start; j < end; j++) {
       var slot = j - start;
       var col = slot % C.OCOLS, row = Math.floor(slot / C.OCOLS);
@@ -79,26 +87,14 @@
 
       // The label lane, in the rail's language: every block shows
       // ONE WORD, and the block the ring rests on reads the FULL
-      // name after the same beat — hold, then integer-cell walk
-      // through the padded name. Same clock (the drawer is its own
-      // lane in kit.selKey), same hold, same step.
+      // name after the same beat — hold, then integer-cell walk.
+      // The algorithm lives in kit.labelPaint (one implementation
+      // for both surfaces), the lane width in kit.OVERLAY_LABEL_W
+      // (the guard reads the same constant).
       var L = kit.tileLabel(full, kit.shortName(full));
       var ly = y + C.OCH - 27;
-      var lab = L.full || L.word;
       if (focused) {
-        var el = kit.phaseMs(vm);
-        if (el <= kit.SCROLL_HOLD) {
-          out = out.concat(P.pxText(L.word.slice(0, LW), 3, ink, x + 10, ly));
-        } else if (lab.length > LW) {
-          var cyc = lab + " ", per = cyc.length;
-          var s2 = Math.floor((el - kit.SCROLL_HOLD) / kit.SCROLL_MS);
-          s2 = ((s2 % per) + per) % per;
-          var win = "";
-          for (var wc = 0; wc < LW; wc++) win += cyc.charAt((s2 + wc) % per);
-          out = out.concat(P.pxText(win, 3, ink, x + 10, ly));
-        } else {
-          out = out.concat(P.pxText(lab, 3, ink, x + 10, ly));
-        }
+        out = out.concat(kit.labelPaint(P, vm, L, ink, x + 10, ly, 3, LW));
         out.push(P.ring(x, y, C.OCW, C.OCH, 4, vm.overlayEdit ? kit.RED : kit.INK));
       } else {
         out = out.concat(P.pxText(L.word.slice(0, LW), 3, ink, x + 10, ly));
@@ -118,9 +114,8 @@
     // right-hand cue line states the mode; outside edit the cue slot
     // carries the teletext page number instead — cyan, where P100
     // wore its index.
-    var fy = C.FOOT_Y, fx = C.MARGIN;
-    out.push(P.chip(fx, fy + 3, kit.RED));
-    out = out.concat(P.pxText("EDIT", 4, kit.INK, fx + 32, fy));
+    var fy = C.FOOT_Y;
+    out = out.concat(kit.chipWord(P, C.MARGIN, fy, kit.RED, "EDIT").nodes);
     if (vm.overlayEdit) {
       var focusApp = list[vm.overlayIndex];
       var fpin = focusApp && pinOf[String(focusApp.appId)];
@@ -129,12 +124,10 @@
         cue = "UP DOWN MOVE   PINS FULL   RED EXIT";
       else
         cue = "UP DOWN MOVE   OK " + (fpin ? "UNPIN" : "PIN") + "   RED EXIT";
-      out = out.concat(P.pxText(cue, 4, kit.RED,
-        C.RIGHT - P.textWidth(cue, 4), C.FOOT_Y));
+      out = out.concat(kit.rightFoot(P, cue, kit.RED, C.FOOT_Y));
     } else if (pages > 1) {
-      var pg = (page + 1) + "/" + pages;
-      out = out.concat(P.pxText(pg, 4, kit.CYAN,
-        C.RIGHT - P.textWidth(pg, 4), C.FOOT_Y));
+      out = out.concat(kit.rightFoot(P,
+        (page + 1) + "/" + pages, kit.CYAN, C.FOOT_Y));
     }
     return out;
   };
@@ -159,8 +152,6 @@
     if (v === "on" || v === "shown") return kit.GREEN;
     if (v === "off" || v === "hidden") return kit.FAINT;
     if (v === "custom") return kit.CYAN;
-    if (v === "favorites full") return kit.RED;
-    if (v === "OK removes" || v === "OK adds") return kit.AMBER;
     return kit.CYAN;
   }
 
@@ -314,8 +305,17 @@
     if (vm.idle) {
       kids = kit.renderIdle(P, vm);
     } else {
-      kids = (vm.page === "inputs" ? kit.renderInputs(P, vm) : kit.renderHome(P, vm));
-      if (vm.overlay) kids = kids.concat(kit.renderOverlay(P, vm));
+      // The drawer ground is full-screen and flat, so the page
+      // under it must not be painted: at ~2000 blocks a beat it
+      // was ~40% of every marquee repaint, showing through at 6%
+      // alpha under a ground the owner chose as NEAR-BLACK FLAT
+      // (review, 2026-11-22). The settings panel is an inset card,
+      // so it still sits over the live page.
+      if (vm.overlay) {
+        kids = kit.renderOverlay(P, vm);
+      } else {
+        kids = (vm.page === "inputs" ? kit.renderInputs(P, vm) : kit.renderHome(P, vm));
+      }
       if (vm.settings) kids = kids.concat(kit.renderSettings(P, vm));
       kids = kids.concat(kit.renderHud(P, vm));
       kids = kids.concat(kit.renderToast(P, vm));

@@ -3,8 +3,10 @@
  * The Launcher's own settings page (not the stock TV menu): rows per
  * page, the actions they trigger, and the name editor's on-screen
  * keyboard. Favorites have no page of their own (owner, 2026-11-22):
- * they are managed on the rail — RED edits, OK removes — and pinned
- * back from the APPS page; the root only reports the count. FAV_MAX
+ * membership is edited in the APPS grid (RED edits, OK pins and
+ * unpins), order and removal on the rail (RED edits, OK removes) —
+ * one door per concern — and the settings apps page only hides and
+ * shows; the root only reports the count. FAV_MAX
  * is 18: 7-up rail pages, pages need not be full.
  */
 (function (self) {
@@ -20,10 +22,9 @@
         var vm = this, rows = [];
         if (this.settingsPage === "name") return rows;
         if (this.settingsPage === "apps") {
-          var favs2 = (this.prefs && this.prefs.favorites) || [];
           this.allApps().forEach(function (app) {
             var visible = vm.appVisible(app);
-            var isPinned = kit.inAppList(favs2, app);
+            var isPinned = vm.pinSlot(app) > 0;
             rows.push({
               kind: "app", app: app,
               label: kit.shortName(app.appName),
