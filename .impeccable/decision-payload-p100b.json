@@ -1,0 +1,56 @@
+{
+  "title": "Clock page — wallpaper window variants",
+  "question": "Clock page kept, per your steer: smaller time, favorites bottom-aligned, the middle of the screen left empty as wallpaper space. Four ways to arrange that frame. Pick one, steer again, or mix.",
+  "options": [
+    {
+      "id": "p100b-corner",
+      "kind": "grounded",
+      "label": "Clock · Corner",
+      "lineage": "teletext page corner — the index lives in the corner, the picture keeps the page",
+      "thesis": "Time tucked top-left, favorites pinned to the floor, the whole middle left to the wallpaper.",
+      "palette": ["#000000", "#ffd200", "#35d4d4", "#ffffff"],
+      "materials": ["block numerals", "flat numbered blocks"],
+      "viewport": "80px yellow 21:47 top-left with a micro date line; six numbered blocks bottom-aligned as a floor rail; colour keys and P110 as one thin line at the very foot; vast empty middle for the wallpaper.",
+      "risk": "Corner-quiet: nothing pulls the eye if the wallpaper is busy behind the blocks.",
+      "html": ".impeccable/mocks/decision/p100b-corner.html"
+    },
+    {
+      "id": "p100b-split",
+      "kind": "grounded",
+      "label": "Clock · Split rule",
+      "lineage": "teletext page sections divided by single-line headings",
+      "thesis": "One cyan rule across the empty middle divides time-above from favorites-below — the rule itself carries the P110 cue.",
+      "palette": ["#000000", "#35d4d4", "#ffd200", "#ffffff"],
+      "materials": ["hairline section rules", "inline page cue on the rule"],
+      "viewport": "96px white clock top-left; a thin cyan line across mid-page carrying P110 INPUTS ▸ at its far end; favorites bottom-aligned; keys bottom-left.",
+      "risk": "The middle line competes with the wallpaper it frames.",
+      "html": ".impeccable/mocks/decision/p100b-split.html"
+    },
+    {
+      "id": "p100b-ticker",
+      "kind": "grounded",
+      "label": "Clock · Newsflash",
+      "lineage": "teletext newsflash strips running through page body",
+      "thesis": "The empty middle gets exactly one line of live state — a newsflash strip that changes, everything else stays out of the wallpaper's way.",
+      "palette": ["#000000", "#ffd200", "#35d435", "#ffffff"],
+      "materials": ["single body line", "block rail"],
+      "viewport": "Small 64px clock + date inline top-left; one white micro line through mid-page carrying live input or new-content state; favorites bottom rail; keys at foot.",
+      "risk": "The strip must actually carry news — a static line reads as junk chrome.",
+      "html": ".impeccable/mocks/decision/p100b-ticker.html"
+    },
+    {
+      "id": "p100b-frame",
+      "kind": "grounded",
+      "label": "Clock · Page frame",
+      "lineage": "full teletext page geometry — every index element in a page corner",
+      "thesis": "The UI becomes a picture frame: clock corner, P100 label corner, favorites floor, keys foot — wallpaper gets the entire centre.",
+      "palette": ["#000000", "#ffd200", "#d43535", "#ffffff"],
+      "materials": ["corner indices", "floor rail"],
+      "viewport": "90px clock top-left, P100 label top-right, six-block favorites rail on the floor, keys bottom-left, P110 bottom-right; nothing else exists between.",
+      "risk": "Maximum wallpaper freedom also means zero hierarchy — all corners compete equally.",
+      "html": ".impeccable/mocks/decision/p100b-frame.html"
+    }
+  ],
+  "buildPath": { "value": "code" },
+  "steer": true
+}

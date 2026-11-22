@@ -1,0 +1,56 @@
+{
+  "title": "Candy pop — settle the identity system",
+  "question": "Candy pop is picked. The one open conflict: neon blocks and brand cubes compete for the same glance. Four resolutions, each with a single governing rule — pick the rule you want the rail to obey.",
+  "options": [
+    {
+      "id": "candy-brandblock",
+      "kind": "grounded",
+      "label": "Candy · Brand blocks",
+      "lineage": "channel-branded tiles — the app's own colour IS the tile",
+      "thesis": "One system: the app's brand paints the block; cubes are gone; a plain letter rides the block corner.",
+      "palette": ["#000000", "#e50914", "#00a8e1", "#1db954"],
+      "materials": ["brand-coloured blocks", "white monogram letters"],
+      "viewport": "Black page, white clock, cyan P100; blocks painted in real brand colours (YouTube red, Netflix red, Prime blue, Crunchyroll orange, Spotify green, Plex amber); big initial letters replace cubes; white outline marks selection.",
+      "risk": "YouTube and Netflix are both red — the name and number must carry the difference.",
+      "html": ".impeccable/mocks/decision/p100e-brandblock.html"
+    },
+    {
+      "id": "candy-duotone",
+      "kind": "grounded",
+      "label": "Candy · Brand duotone",
+      "lineage": "duotone branding systems — one hue, two intensities",
+      "thesis": "One system at two depths: the block is the brand hue darkened, the cube the same hue saturated — depth, not competition.",
+      "palette": ["#000000", "#5a0000", "#e50914", "#ffffff"],
+      "materials": ["deep muted blocks", "saturated cubes"],
+      "viewport": "Black page; each block muted-deep in its own brand hue (dark red for YouTube, wine for Netflix, deep blue Prime...), the cube above it blazing the same hue at full brand saturation; white names; selection outline white.",
+      "risk": "Muted hues can look muddy side by side if the darkening isn't consistent across all six.",
+      "html": ".impeccable/mocks/decision/p100e-duotone.html"
+    },
+    {
+      "id": "candy-quietrail",
+      "kind": "grounded",
+      "label": "Candy · Quiet rail",
+      "lineage": "instrument rails — the rail is chrome, the lamps carry colour",
+      "thesis": "Strict job split: blocks near-black, ONLY cubes carry brand colour; the launcher's own neon lives solely in chrome (cues, clock accents, selection).",
+      "palette": ["#000000", "#16181c", "#4cc9f0", "#ffb900"],
+      "materials": ["near-black blocks", "neon chrome cues"],
+      "viewport": "Black page; six near-black blocks with white brand cubes and names; the candy pigment appears only as cyan P100, amber P110 cue, white selection outline and green LIVE dot.",
+      "risk": "Quietest of the four — loses the candy exuberance the pick was chosen for.",
+      "html": ".impeccable/mocks/decision/p100e-quietrail.html"
+    },
+    {
+      "id": "candy-channel",
+      "kind": "grounded",
+      "label": "Candy · Channel index",
+      "lineage": "broadcast channel line-ups — the station paints its own numbers, brands irrelevant",
+      "thesis": "Brands excluded: colour belongs to the PAGE NUMBER, fixed forever (101 red, 102 violet, 103 cyan...) — apps are channels on your home's line-up.",
+      "palette": ["#000000", "#e13a2f", "#7f5af0", "#4cc9f0"],
+      "materials": ["number-painted blocks", "neutral monograms"],
+      "viewport": "Black page; block colour determined by page number alone, whatever app sits there; neutral white cube with black letter; muscle memory: red is always 101, violet always 102.",
+      "risk": "Zero brand signal — recognisable only to you; a re-pin changes which app wears which colour.",
+      "html": ".impeccable/mocks/decision/p100e-channel.html"
+    }
+  ],
+  "buildPath": { "value": "code" },
+  "steer": true
+}

@@ -11,8 +11,40 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { hash } = require('./native-trial.cjs');
 const wallpaper = require('./wallpaper.cjs');
-const PARTS = ['native-platform.js', 'native-alvidaa.js', 'native-entry.js'];
+// The frontend lives in native/ as one module per concern, concatenated
+// in numeric order onto a shared namespace (00-kit bootstraps it; the
+// bundle boundary is where modularity ends and the single-file contract
+// for the TV begins — the WebView gets one script, the repo gets ten).
+const PARTS = [
+  'native-platform.js',
+  'native/00-kit.js',
+  'native/10-glyphs.js',
+  'native/20-model.js',
+  'native/30-lifecycle.js',
+  'native/32-settings.js',
+  'native/34-keys.js',
+  'native/40-paint.js',
+  'native/50-pages.js',
+  'native/60-layers.js',
+  'native/80-component.js',
+  'native-entry.js'
+];
 const MARKER = 'ALVIDAA_NATIVE_HOME_V1';
+
+// Production pass for our parts: the vendor half of the bundle is already
+// the vendor's minified production build (Vue production too — verified by
+// the absence of the Vue dev-mode banner in the stock bundle), but ours is
+// readable source with comments, which the TV pays to download and parse
+// at every boot. Minify when a local esbuild can be found; never fail the
+// build over it — an unminified candidate is still correct, just heavier.
+function localEsbuild() {
+  try { return require('esbuild'); } catch (e) { /* not a repo dep */ }
+  try {
+    return require(require.resolve('esbuild', {
+      paths: ['/home/lawliet/Documents/programs/deepseek-harness/node_modules/.pnpm']
+    }));
+  } catch (e) { return null; }
+}
 
 function build(stockFile, output, expect, options) {
   assert.match(String(expect || ''), /^[0-9a-f]{64}$/,
@@ -41,9 +73,17 @@ function build(stockFile, output, expect, options) {
   if (appColours && typeof appColours === 'object' && Object.keys(appColours).length > 0) {
     art += '\nself.AlvidaaNativeAppColours=' + JSON.stringify(appColours) + ';';
   }
-  const candidate = '/* ' + MARKER + '\n * variant: native-alvidaa.js\n */\n' + art + '\n' +
-    stock + '\n;\n' +
-    PARTS.map(file => fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n;\n');
+  // Each part is already a closed IIFE, so minified parts concatenate with
+  // the same '\n;\n' joins as the sources; mangled locals cannot collide
+  // across parts because none leak out of their closure.
+  const esbuild = localEsbuild();
+  const parts = PARTS.map(file => {
+    const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    return esbuild ? esbuild.transformSync(source,
+      { minify: true, target: 'es2017', legalComments: 'none' }).code : source;
+  });
+  const candidate = '/* ' + MARKER + '\n * variant: native/ modules (page frame)\n */\n' + art + '\n' +
+    stock + '\n;\n' + parts.join('\n;\n');
   new vm.Script(candidate, { filename: 'native-candidate.js' });
   if (output) {
     const target = path.resolve(output);
@@ -62,7 +102,8 @@ if (require.main === module) {
   assert.ok(stock && output && expect,
     'Usage: build-native-alvidaa.cjs private-stock.js private-output.js <expected-sha256>');
   const candidate = build(stock, output, expect);
-  console.log('Built alvidaa native candidate: ' + Buffer.byteLength(candidate) +
-    ' bytes; sha256 ' + hash(candidate));
+  console.log('Built alvidaa native candidate' +
+    (localEsbuild() ? ' (parts minified)' : ' (parts unminified: esbuild unavailable)') +
+    ': ' + Buffer.byteLength(candidate) + ' bytes; sha256 ' + hash(candidate));
 }
 module.exports = { build, PARTS, MARKER };

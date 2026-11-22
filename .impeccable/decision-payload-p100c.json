@@ -1,0 +1,56 @@
+{
+  "title": "Page frame — colour themes",
+  "question": "Page frame kept with a shorter foot row (keys smaller than the favorites rail). The layout stops changing now — these are colour-theme options: which teletext palette carries the chrome. Pick one (or steer).",
+  "options": [
+    {
+      "id": "theme-yellow",
+      "kind": "grounded",
+      "label": "Frame · Yellow index",
+      "lineage": "the classic Ceefax index palette — black page, yellow page-numbers",
+      "thesis": "The page you've been choosing: black ground, yellow as the index colour, white micro text, saturated floor rail.",
+      "palette": ["#000000", "#ffd200", "#ffffff", "#888888"],
+      "materials": ["yellow index numerals", "white body text"],
+      "viewport": "Black page; 90px yellow clock, yellow P100 and P110 cues; micro lines grey-white; six saturated blocks on the floor; tiny grey-yellow chips at the foot.",
+      "risk": "The default — safest, but yellow-on-black is what every teletext homage ships.",
+      "html": ".impeccable/mocks/decision/p100c-yellow.html"
+    },
+    {
+      "id": "theme-white",
+      "kind": "grounded",
+      "label": "Frame · White page",
+      "lineage": "inverted teletext pages (white-on-black flipped — used for special pages)",
+      "thesis": "The inverted page: light ground, black index type — teletext's own negative, wallpaper window becomes a bright field.",
+      "palette": ["#e9e9e2", "#111111", "#0a24c8", "#ffd200"],
+      "materials": ["paper-white ground", "black block numerals"],
+      "viewport": "Off-white page; black clock and indices; blue P110 cue; the six saturated floor blocks sit hard against the light ground; dark chips at the foot.",
+      "risk": "A bright full-height ground at 85 inches glows like a lamp at night viewing.",
+      "html": ".impeccable/mocks/decision/p100c-white.html"
+    },
+    {
+      "id": "theme-blue",
+      "kind": "grounded",
+      "label": "Frame · Blue page",
+      "lineage": "the Ceefax header blue promoted to a full page ground",
+      "thesis": "Header blue everywhere: the whole page is the banner, yellow and white float on deep blue.",
+      "palette": ["#0a24c8", "#ffd200", "#ffffff", "#000000"],
+      "materials": ["deep blue field", "yellow index on blue"],
+      "viewport": "Deep blue page ground; yellow clock and cues; white micro lines; the six floor blocks sit on blue with white outlines; yellow chips at the foot.",
+      "risk": "A saturated blue field across an OLED at 3 m is the most tiring of the four.",
+      "html": ".impeccable/mocks/decision/p100c-blue.html"
+    },
+    {
+      "id": "theme-cyan",
+      "kind": "grounded",
+      "label": "Frame · ORF cyan",
+      "lineage": "ORF-Teletext style — cyan and magenta index colours on black",
+      "thesis": "The alpine variant: cyan index type, magenta accents — same grid, cooler electricity.",
+      "palette": ["#000000", "#00d2d2", "#d435d4", "#ffffff"],
+      "materials": ["cyan index numerals", "magenta accents"],
+      "viewport": "Black page; cyan clock and cues; magenta P100 label; white micro lines; saturated floor rail unchanged; cyan chips at the foot.",
+      "risk": "Cyan/magenta is niche — reads modern to you, obscure to anyone else.",
+      "html": ".impeccable/mocks/decision/p100c-cyan.html"
+    }
+  ],
+  "buildPath": { "value": "code" },
+  "steer": true
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Safer hand — pick the visual world",
+  "question": "Round 2 (safer): the roll's hand is set aside and round 1's cards are spent. Three grounded directions from the familiar end, plus the category standard executed against Google TV, Roku and Fire TV. All cards follow your steer: one-word app names and cube-style icon tiles. Pick one, or re-roll again.",
+  "options": [
+    {
+      "id": "r2-vfd",
+      "kind": "grounded",
+      "label": "Video Clock",
+      "lineage": "front-panel VFD displays of the living-room hi-fi stack (VCR / DVD / receiver era)",
+      "thesis": "The TV speaks in the phosphor voice of the stack it replaced: one glowing window says what is live.",
+      "palette": ["#05070a", "#0d1116", "#19e6b8", "#6f7d82"],
+      "materials": ["phosphor glow", "matte black panels"],
+      "viewport": "A full-width matte panel: glowing cyan clock window at left; favorites as matte tiles with cube letter-badges and one-word names; the input strip below glows HDMI 3 · LIVE; small system buttons right of the panel.",
+      "risk": "A one-move world — the glow carries only the clock and status; turned up too far it smears on OLED.",
+      "html": ".impeccable/mocks/decision/r2-vfd.html"
+    },
+    {
+      "id": "r2-teletext",
+      "kind": "grounded",
+      "label": "Page 100",
+      "lineage": "broadcast teletext index pages (Ceefax-era block typography on black)",
+      "thesis": "The home as the TV's own index page: double-height headline, six numbered favorites, colour-coded commands.",
+      "palette": ["#000000", "#0a24c8", "#ffd200", "#35d435", "#d43535"],
+      "materials": ["flat saturated blocks", "double-height display rows"],
+      "viewport": "Blue header band with a double-height white HOME; favorites as flat block tiles numbered 101–106 with one-word names; inputs as cyan lines, the live one flagged LIVE in green; a coloured command line sits at the foot.",
+      "risk": "Reads as retro novelty unless the grid is kept strict and every colour stays functional.",
+      "html": ".impeccable/mocks/decision/r2-teletext.html"
+    },
+    {
+      "id": "r2-titlecards",
+      "kind": "grounded",
+      "label": "Title Card",
+      "lineage": "film title sequences and end-credit typography",
+      "thesis": "Launch as a film title block: the focused app in tall bone-white condensed type, everything else at whisper weight.",
+      "palette": ["#0a0a0b", "#efece4", "#c9a24b", "#4c4a45"],
+      "materials": ["hairline rules", "centered type blocks"],
+      "viewport": "Upper two-thirds: the focused app NETFLIX set monumental over a quiet vignette with its cube badge; a whisper-small rail beneath carries the other apps, the live input, and three tiny system doors.",
+      "risk": "Sparse at 3 m — the secondary hierarchy is thin, and the room may feel empty until you move.",
+      "html": ".impeccable/mocks/decision/r2-titlecards.html"
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "Category Standard",
+    "thesis": "What Google TV, Roku and Fire TV homes ship, executed at full craft — with your one-word names and cube icons.",
+    "palette": ["#0f1115", "#1a1e26", "#f5f7fa", "#2f80ed"],
+    "materials": ["poster-lite tiles", "billboard band"],
+    "viewport": "A billboard band for the last-watched item above; one-word app shelves and an inputs shelf below on a clean 24px grid with a blue focus ring.",
+    "risk": "Indistinguishable from the competition by design.",
+    "html": ".impeccable/mocks/decision/r2-canon.html"
+  },
+  "steer": true
+}

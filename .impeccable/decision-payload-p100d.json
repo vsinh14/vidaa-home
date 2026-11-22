@@ -1,0 +1,68 @@
+{
+  "title": "Page frame — wider colour worlds",
+  "question": "Layout stays (page frame, short foot, floor rail, wallpaper window). This round is pure colour: five different worlds, not four teletext relatives. Pick one, or steer again.",
+  "options": [
+    {
+      "id": "theme-signal",
+      "kind": "grounded",
+      "label": "Frame · Signal red",
+      "lineage": "broadcast tally light — red on dark studio grey",
+      "thesis": "Monochrome chrome, one broadcast red: quiet grey blocks, everything hot says it in red.",
+      "palette": ["#181b20", "#262b32", "#e13a2f", "#e8e6e1"],
+      "materials": ["charcoal blocks", "single tally-red accent"],
+      "viewport": "Near-black page; bone clock, red P100 and cues; grey blocks with bone names and white brand cubes; red outline marks the selection; chips stay physical-button colours at the foot.",
+      "risk": "Monochrome blocks make apps harder to tell apart at a glance — the brand cubes carry all the identity.",
+      "html": ".impeccable/mocks/decision/p100d-signal.html"
+    },
+    {
+      "id": "theme-teal",
+      "kind": "grounded",
+      "label": "Frame · Midnight teal",
+      "lineage": "deep-ocean modern palettes — blue-green field with coral",
+      "thesis": "The wallpaper window glows deep teal; coral numerals float on it like an instrument panel at sea.",
+      "palette": ["#0e2233", "#16324a", "#ff6b5e", "#f2ede4"],
+      "materials": ["deep teal ground", "coral index numerals"],
+      "viewport": "Teal page; coral clock and cues; cream names on blue-slate blocks; coral outline on the selected block; micro lines pale steel; foot chips unchanged.",
+      "risk": "The coloured ground competes with any wallpaper you put behind it — best treated AS the wallpaper.",
+      "html": ".impeccable/mocks/decision/p100d-teal.html"
+    },
+    {
+      "id": "theme-amber",
+      "kind": "grounded",
+      "label": "Frame · Charcoal amber",
+      "lineage": "valve-era instrument dials — amber on warm black",
+      "thesis": "Warm black page, amber dial numerals — the room's lamp is the page itself.",
+      "palette": ["#191512", "#241f19", "#f0a832", "#efe7d8"],
+      "materials": ["warm charcoal blocks", "amber dial glow type"],
+      "viewport": "Warm-black page; amber clock, P100 and cue; cream names on brown-charcoal blocks; amber outline on selection; micro lines warm grey.",
+      "risk": "Warm cast everywhere can read dated if the amber is muddy rather than clean.",
+      "html": ".impeccable/mocks/decision/p100d-amber.html"
+    },
+    {
+      "id": "theme-paper",
+      "kind": "grounded",
+      "label": "Frame · Paper ink",
+      "lineage": "printed teletext listings on newsprint — inverted to paper stock",
+      "thesis": "An editorial page on paper: ink-black blocks set on warm white, one print-red for selection.",
+      "palette": ["#f4f2ec", "#16181c", "#c23b2f", "#666660"],
+      "materials": ["paper ground", "ink blocks", "print red"],
+      "viewport": "Paper page; ink clock and indices; six ink-black blocks with paper-white names; red outline marks selection; grey micro lines; P110 cue in red.",
+      "risk": "A full light page on an 85\" panel is a lamp in a dark room — fine if the room is bright.",
+      "html": ".impeccable/mocks/decision/p100d-paper.html"
+    },
+    {
+      "id": "theme-candy",
+      "kind": "grounded",
+      "label": "Frame · Candy pop",
+      "lineage": "modern streaming-brand neons on true black",
+      "thesis": "Black page, but the rail is contemporary colour — violet, neon green, cyan, magenta — teletext geometry with 2026 pigment.",
+      "palette": ["#000000", "#7f5af0", "#4cc9f0", "#2cb67d"],
+      "materials": ["vivid flat blocks", "white index chrome"],
+      "viewport": "True black page; white clock and cues; the six floor blocks in modern neons (red, violet, cyan, green, amber, pink) with white outline on selection; cubes unchanged; chips at foot.",
+      "risk": "Neon blocks + brand cubes = two identity systems competing for the same glance.",
+      "html": ".impeccable/mocks/decision/p100d-candy.html"
+    }
+  ],
+  "buildPath": { "value": "code" },
+  "steer": true
+}

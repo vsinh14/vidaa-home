@@ -1,0 +1,127 @@
+{
+  "title": "Choose the visual world",
+  "question": "The roll assigned Test Card Home — the TV's broadcast identity as its home screen's system. Keep it, take the pick or a competitive challenger, adopt a declined one, or re-roll.",
+  "seed": "seed:417d4bf883d88576",
+  "options": [
+    {
+      "id": "assigned",
+      "kind": "assigned",
+      "kicker": "THE ROLL",
+      "label": "Test Card Home",
+      "lineage": "broadcast test cards and signal discipline (SMPTE/ITT-era TV identity)",
+      "thesis": "The TV's own on-air identity, worn as its home screen.",
+      "palette": ["#12151c", "#f2f4f6", "#3f9e4d", "#e8b23a", "#e13a2f"],
+      "materials": ["lit signal strip", "registration hairlines"],
+      "viewport": "One glanceable screen: tabular clock, favorites rail with icon badges, input rail, and a test-card signal strip along the bottom edge whose lit segment shows what is live; no panning, no hero line.",
+      "risk": "Reads clinical if the strip, hairlines and micro-labels become ornament instead of state; every colour must mean something.",
+      "raised": [
+        {"from": "Streaming title-card wall", "raise": "Unfocused tiles keep quiet — only the focused tile carries a state line."},
+        {"from": "Manual tab board", "raise": "Panels cut on a 90 ms two-frame step, never a long ease."},
+        {"from": "Datamatics field", "raise": "Clock and counts set as tabular numerals in fixed fields."},
+        {"from": "Ticket wallet", "raise": "State stamps in place; rows never reorder when they change."},
+        {"from": "Annual plates", "raise": "One grotesque at a strict scale, hairlines and letterspaced micro-labels only."},
+        {"from": "Crouwel specimen", "raise": "The grid is the armature: every tile and gutter snaps to one visible rhythm."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "kind": "pick",
+      "kicker": "IMPECCABLE\u2019S PICK",
+      "label": "Hi-Fi Faceplate",
+      "lineage": "1960s hi-fi receiver controls (Braun-era)",
+      "thesis": "The living room's dial era: apps as faceplate buttons, inputs as a selector scale.",
+      "palette": ["#23262b", "#d8d5cd", "#c2703d", "#8f9aa0"],
+      "materials": ["engraved micro-labels", "hairline dial scale"],
+      "viewport": "Favorites as machined lit buttons; the input selector drawn as a labeled hairline scale with the live input under the pointer; clock in a recessed display window.",
+      "risk": "Familiarity — this is the most-worn minimalism lane in industrial design.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {
+      "id": "challenger-streaming",
+      "kind": "challenger",
+      "catalogId": "pop-culture-shelf-streaming-title-card-wall",
+      "label": "Streaming Title-Card Wall",
+      "verdict": "competitive",
+      "lineage": "streaming catalog shelf culture",
+      "thesis": "Everything as familiar shelves: the focused tile expands and reveals its metadata, the rest dims.",
+      "case": "Holds audience familiarity; loses product clarity — this is the shelf-plus-pan arrangement the owner just rejected on this TV.",
+      "risk": "Every smart TV ships this; indistinguishable from the incumbent.",
+      "html": ".impeccable/mocks/decision/challenger-streaming.html"
+    },
+    {
+      "id": "challenger-manual",
+      "kind": "challenger",
+      "catalogId": "rw-manual-acetate-tab-board",
+      "label": "Manual Tab Board",
+      "verdict": "competitive",
+      "lineage": "boxed-software reference manuals, tabbed section boards",
+      "thesis": "A stepped tab rail carries the surfaces; each section owns one saturated hue; changes step, never ease.",
+      "case": "Strong for an owner who lives by service manuals — but a tab board cannot carry the seconds-long glance home screen.",
+      "risk": "Digs deep into settings navigation while the home glance needs to stay instant.",
+      "html": ".impeccable/mocks/decision/challenger-manual.html"
+    },
+    {
+      "id": "challenger-datamatics",
+      "kind": "challenger",
+      "catalogId": "ikeda-datamatics",
+      "label": "Datamatics Field",
+      "verdict": "declined",
+      "lineage": "Ikeda-style data visual concert posters",
+      "thesis": "A barcode lattice of hairline bars with dense monospace numbers.",
+      "case": "Pure black-and-white purity forbids the live/standby colour semantics the product needs.",
+      "kept": "Tabular numerals and fixed number fields.",
+      "risk": "Costume of a concert hall, not a living room."
+    },
+    {
+      "id": "challenger-ticket",
+      "kind": "challenger",
+      "catalogId": "vernacular-ephemera-jet-age-ticket-wallet",
+      "label": "Jet-Age Ticket Wallet",
+      "verdict": "declined",
+      "lineage": "carbon-copy travel coupons and baggage stubs",
+      "thesis": "Each launch as a coupon torn from an official wallet.",
+      "case": "Paper coupon costume fails at 3 m on an 85-inch panel.",
+      "kept": "State stamps in place; records never reorder.",
+      "risk": "Nostalgia texture over working state."
+    },
+    {
+      "id": "challenger-annual",
+      "kind": "challenger",
+      "catalogId": "design-annual-s-plate-section",
+      "label": "Design Annual Plates",
+      "verdict": "declined",
+      "lineage": "print annual plate sections on uncoated stock",
+      "thesis": "Near-white printed sheets with registration crosses and one grotesque.",
+      "case": "A near-white ground glares from the couch at night on an 85-inch panel.",
+      "kept": "One grotesque at a strict scale; hairline precision.",
+      "risk": "Gallery print, not living-room light."
+    },
+    {
+      "id": "challenger-crouwel",
+      "kind": "challenger",
+      "catalogId": "crouwel-grid-specimen",
+      "label": "Crouwel Grid Specimen",
+      "verdict": "declined",
+      "lineage": "Wim Crouwel gridded type specimens",
+      "thesis": "Monumental grid-constructed letterforms on a visible construction grid.",
+      "case": "Monumental letterforms are a poster; they displace the apps instead of serving them.",
+      "kept": "The grid itself as the visible armature.",
+      "risk": "Type specimen first, launcher never."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "kind": "canon",
+    "label": "The category standard",
+    "thesis": "The shelf launcher visitors expect, executed at full craft.",
+    "palette": ["#0f1115", "#1a1e26", "#f5f7fa", "#2f80ed"],
+    "materials": ["poster tiles", "billboard row"],
+    "viewport": "A billboard for the last-watched item above, shelves of real apps and inputs below.",
+    "risk": "Indistinguishable from the competition by design.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

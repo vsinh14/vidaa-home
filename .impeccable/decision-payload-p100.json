@@ -1,0 +1,56 @@
+{
+  "title": "Page 100 — four arrangements",
+  "question": "Page 100 is pinned. These are four arrangements of its teletext grammar for your 85-inch 4K: no HOME banner, no inputs on this screen (they live on their own page, P110), no status clutter, and a denser, smaller scale. Pick the arrangement — or steer.",
+  "options": [
+    {
+      "id": "p100-grid",
+      "kind": "grounded",
+      "label": "P100 · Index grid",
+      "lineage": "teletext index page (the P100 front page itself)",
+      "thesis": "Six numbered blocks, nothing else: the front page exactly as teletext indexes a service.",
+      "palette": ["#000000", "#ffd200", "#35d435", "#35d4d4", "#ffffff"],
+      "materials": ["flat saturated blocks", "block numerals"],
+      "viewport": "Clock double-height top-left as the headline; six flat numbered blocks filling the page; colour-key command line at the foot; P110 INPUTS as a tiny page number bottom-right.",
+      "risk": "Six blocks alone can feel bare at 85-inch scale if the rhythm wobbles.",
+      "html": ".impeccable/mocks/decision/p100-grid.html"
+    },
+    {
+      "id": "p100-rows",
+      "kind": "grounded",
+      "label": "P100 · Rows",
+      "lineage": "teletext A-Z service menus (numbered rows, inverted selection)",
+      "thesis": "Favorites as a numbered list — the teletext menu page: scan the column, land on a number.",
+      "palette": ["#000000", "#ffffff", "#0a24c8", "#ffd200"],
+      "materials": ["inverted selection row", "hairline dividers"],
+      "viewport": "Six rows, each: yellow block number, white one-word name, thin rule; the selected row renders as an inverted blue block across the column; clock inline at top-right; P110 cue in the footer.",
+      "risk": "Lists read slower than blocks; the number becomes decoration if the names dominate.",
+      "html": ".impeccable/mocks/decision/p100-rows.html"
+    },
+    {
+      "id": "p100-mosaic",
+      "kind": "grounded",
+      "label": "P100 · Mosaic",
+      "lineage": "teletext feature pages (asymmetric colour panels, sport-page layout)",
+      "thesis": "A colour-field mosaic where block size says priority — the two you watch most take double panels.",
+      "palette": ["#000000", "#0a24c8", "#d43535", "#35d435", "#ffd200"],
+      "materials": ["flat colour fields", "white block type on saturated panels"],
+      "viewport": "Two double-width panels (YouTube, Netflix) over four singles; page numbers burned into each panel corner; clock as a narrow headline strip across the top; footer carries only colour keys and P110.",
+      "risk": "Colour fields at 85 inches are loud; wrong panel size and priority becomes noise.",
+      "html": ".impeccable/mocks/decision/p100-mosaic.html"
+    },
+    {
+      "id": "p100-clock",
+      "kind": "grounded",
+      "label": "P100 · Clock page",
+      "lineage": "teletext clock/newsflash pages (giant four-character time as the page's headline)",
+      "thesis": "The time is the page's headline — glance mode: what's the time, what's pinned, done.",
+      "palette": ["#000000", "#ffd200", "#ffffff", "#35d4d4"],
+      "materials": ["4× double-height numerals", "whisper micro-labels"],
+      "viewport": "21:47 rendered as enormous double-height yellow block numerals across the upper half; one compact row of six small numbered blocks beneath; date and LIVE status as a single micro line; P110 cue in the footer.",
+      "risk": "Clock-first makes favorites secondary furniture — wrong bet if you launch more than you glance.",
+      "html": ".impeccable/mocks/decision/p100-clock.html"
+    }
+  ],
+  "buildPath": { "value": "code" },
+  "steer": true
+}
