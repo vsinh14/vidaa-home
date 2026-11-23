@@ -16,19 +16,20 @@ that sort of thing).
 
 ## What it looks like
 
-Home page — full-page art, pixel clock + date chrome, page cue:
+Home page, rail up — pixel clock + date, page cues, favourites rail:
 
-![home page](shots/p100-art-1.png)
+![home with rail](shots/readme-rail.png)
 
 Inputs page — the rail splits into a ports row and a data row, one
 selection ring per page:
 
-![inputs page](shots/p100-pad24-1.png)
+![inputs page](shots/readme-inputs.png)
 
-Zen mode — lid folded, chrome faded, only clock + date on bare art
-(enable DVD bounce and this pair drifts and reflects off the edges):
+Zen mode — lid folded after 30 s of silence, chrome fades, only the
+clock + date remain on bare art (and with DVD bounce enabled, that
+pair drifts and reflects off the screen edges):
 
-![zen clock](shots/dvd-boot2.png)
+![zen clock](shots/readme-home.png)
 
 The Inputs page rail is a state machine with one ring per page and a
 lid that folds/expands under the D-pad; the exact contract, drawn:
