@@ -27,19 +27,44 @@
       // on, and four offset halo copies in the OPPOSITE colour
       // guarantee legibility anywhere on any wallpaper — no
       // background box, ever (owner, 2026-11-22).
-      var ink = vm.zenInk || kit.INK;
+      // Block geometry first: the ink is chosen from the art the
+      // block ACTUALLY sits on, and the DVD engine needs the
+      // measure every pass.
+      var bw = Math.max(P.textWidth(clock, 13), P.textWidth(date, 4));
+      var bh = (C.DATE_Y - C.CLOCK_Y) + 7 * 4;
+      var gx = C.MARGIN, gy = C.CLOCK_Y;
+      if (kit.dvd) {
+        kit.dvd.w = bw;
+        kit.dvd.h = bh;
+        kit.dvd.rx = gx;
+        kit.dvd.ry = gy;
+        if (kit.dvd.active) { gx = kit.dvd.x; gy = kit.dvd.y; }
+        // Eraser REMOVED (owner, 2026-11-23): an art-slice patch
+        // re-rasterizes independently of the wallpaper box, and
+        // the seams it left around the moving logo were worse than
+        // the residue it covered. The cobalt vacated-rect bug stays
+        // open (see skill); do not re-add slice boxes.
+      }
+      // Manifest tile luma (kit.inkForRect): the block picks white
+      // or black ink from the art it currently covers — follows it
+      // during the bounce, survives mid-zen wallpaper swaps, and
+      // needs no canvas reads on the panel. Falls back to the
+      // canvas-sampled zenInk when no manifest luma exists.
+      var ink = kit.inkForRect(self.AlvidaaNativeWallpaperLum, gx, gy, bw, bh) ||
+        vm.zenInk || kit.INK;
       var halo = kit.haloFor(ink);
+      var dateY = gy + (C.DATE_Y - C.CLOCK_Y);
       var offs = [[-1, 0], [1, 0], [0, -1], [0, 1]], oi;
       for (oi = 0; oi < 4; oi++) {
         out = out.concat(P.pxText(clock, 13, halo,
-          C.MARGIN + offs[oi][0], C.CLOCK_Y + offs[oi][1]));
+          gx + offs[oi][0], gy + offs[oi][1]));
       }
-      out = out.concat(P.pxText(clock, 13, ink, C.MARGIN, C.CLOCK_Y));
+      out = out.concat(P.pxText(clock, 13, ink, gx, gy));
       for (oi = 0; oi < 4; oi++) {
         out = out.concat(P.pxText(date, 4, halo,
-          C.MARGIN + offs[oi][0], C.DATE_Y + offs[oi][1]));
+          gx + offs[oi][0], dateY + offs[oi][1]));
       }
-      out = out.concat(P.pxText(date, 4, ink, C.MARGIN, C.DATE_Y));
+      out = out.concat(P.pxText(date, 4, ink, gx, dateY));
       return out;
     }
     out = out.concat(P.pxText(clock, 13, kit.INK, C.MARGIN, C.CLOCK_Y));

@@ -142,13 +142,6 @@
 
   var SETTINGS_TITLES = { root: "HOME SETTINGS", apps: "APPS",
     inputs: "INPUT NAMES", wallpapers: "WALLPAPERS", name: "RENAME" };
-  var SETTINGS_HINTS = {
-    root: "UP DOWN MOVE  OK OPEN",
-    apps: "OK HIDE/SHOW",
-    inputs: "OK RENAME",
-    wallpapers: "OK OR LEFT RIGHT TICKS THE POOL",
-    name: "BACK SAVES"
-  };
   function valueColour(v) {
     if (v === "on" || v === "shown" || v === "[x]") return kit.GREEN;
     if (v === "off" || v === "hidden" || v === "[ ]") return kit.FAINT;
@@ -183,8 +176,8 @@
     }));
     out = out.concat(P.pxText(SETTINGS_TITLES[page] || "HOME SETTINGS", 6,
       kit.INK, C.SPX + 36, py + 30));
-    out.push(P.mono(C.SPX + C.SPW - 620, py + 44, 584, 16,
-      SETTINGS_HINTS[page] || "", kit.DIM, "right"));
+    // No top-right header info (owner, 2026-11-23): the hint line
+    // that used to sit right-aligned in the panel header is gone.
 
     if (page === "name") {
       // Draft line, then the 6x6 keyboard. Digits live in the keyboard,

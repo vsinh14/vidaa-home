@@ -135,6 +135,12 @@
             (this.prefs.idleMinutes > 0 ? this.prefs.idleMinutes + " minutes" : "off")
         });
         rows.push({
+          kind: "dvd", label: "DVD bounce",
+          sub: "10 s into zen the clock and date bounce",
+          value: this.prefs.dvd ? "on" : "off",
+          speak: "DVD bounce, " + (this.prefs.dvd ? "on" : "off")
+        });
+        rows.push({
           kind: "recent", label: "Recently-used order",
           sub: "sorts the apps overlay by launch time",
           value: this.prefs.recentOrder ? "on" : "off",
@@ -145,6 +151,14 @@
       toggleAutoSwitch: function () {
         kit.writePref("alvidaa_auto_switch", !this.prefs.autoSwitch);
         this.readPrefs();
+      },
+      toggleDvd: function () {
+        kit.writePref("alvidaa_dvd", !this.prefs.dvd);
+        this.readPrefs();
+        // Reflect a mid-zen change immediately: stop any motion armed
+        // under the old choice, re-arm if zen is up and bounce is on.
+        if (kit.dvdStop) kit.dvdStop();
+        if (this.zen && this.prefs.dvd && kit.dvdStart) kit.dvdStart(this);
       },
       toggleRecentOrder: function () {
         kit.writePref("alvidaa_recent_order", !this.prefs.recentOrder);
@@ -302,6 +316,7 @@
         if (row.kind === "autoswitch") this.toggleAutoSwitch();
         else if (row.kind === "recent") this.toggleRecentOrder();
         else if (row.kind === "idle") this.cycleIdle(1);
+        else if (row.kind === "dvd") this.toggleDvd();
         else if (row.kind === "open-apps") { this.settingsPage = "apps"; this.settingsIndex = 0; this.clamp(); }
         else if (row.kind === "open-inputs") { this.settingsPage = "inputs"; this.settingsIndex = 0; this.clamp(); }
         else if (row.kind === "open-wallpapers") { this.settingsPage = "wallpapers"; this.settingsIndex = 0; this.clamp(); }
@@ -324,6 +339,7 @@
         if (row.kind === "autoswitch") this.toggleAutoSwitch();
         else if (row.kind === "recent") this.toggleRecentOrder();
         else if (row.kind === "idle") this.cycleIdle(dir);
+        else if (row.kind === "dvd") this.toggleDvd();
         else if (row.kind === "wallpaper") this.toggleWallpaper(row.wp);
         else if (row.kind === "wp-timer") this.cycleWpTimer(dir);
       },

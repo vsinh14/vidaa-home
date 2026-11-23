@@ -21,6 +21,7 @@ const MODULES = [
   'native/00-kit.js', 'native/10-glyphs.js', 'native/20-model.js',
   'native/30-lifecycle.js', 'native/32-settings.js', 'native/34-keys.js',
   'native/36-wallpaper.js',
+  'native/37-dvd.js',
   'native/40-paint.js', 'native/50-pages.js', 'native/60-layers.js',
   'native/80-component.js'
 ];

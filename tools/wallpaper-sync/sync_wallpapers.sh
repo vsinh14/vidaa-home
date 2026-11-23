@@ -14,7 +14,7 @@
 set -u
 TV_IP=192.168.0.15
 TV_PORT=8008
-KEY="$(cd "$(dirname "$0")/../.." && pwd)/keys/ur8s_root"
+KEY="$(cd "$(dirname "$0")/../../.." && pwd)/keys/ur8s_root"
 RECON="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="$HOME/Pictures/tv-wallpapers"
 TV_DIR="/APPS/alvidaa/launcher/wallpapers"
@@ -52,7 +52,14 @@ for f in "$SRC"/*.jpg "$SRC"/*.jpeg "$SRC"/*.png "$SRC"/*.webp "$SRC"/*.bmp; do
   WANT_SRC[$id]="$push"
   WANT_MD5[$id]="$md5"
   WANT_FILE[$id]="$id.$ext"
-  LIST_JSON="$LIST_JSON{\"id\":\"$id\",\"file\":\"$id.$ext\",\"md5\":\"$md5\",\"kind\":\"image\"},"
+  # Dims + a 16x9 mean-luma grid ride the manifest (2026-11-23): the
+  # grid replicates the cover crop (center gravity) then scales the
+  # whole thing to 16x9 — one pixel per 120 px screen tile — so zen
+  # ink follows the art under the clock block without canvas reads.
+  wh="$(magick identify -format '%w %h' "$push" 2>/dev/null || echo '0 0')"
+  lum="$(magick "$push" -gravity center -resize '16x9^' -extent 16x9 -colorspace Gray -depth 8 txt:- 2>/dev/null | awk 'match($0,/\(([0-9]+),/){print substr($0,RSTART+1,RLENGTH-2)}' | paste -sd, -)"
+  lumf=""; [ -n "$lum" ] && lumf=",\"lum\":[$lum]"
+  LIST_JSON="$LIST_JSON{\"id\":\"$id\",\"file\":\"$id.$ext\",\"md5\":\"$md5\",\"kind\":\"image\",\"w\":${wh% *},\"h\":${wh#* }$lumf},"
   echo "queued $base -> $id.$ext ($(numfmt --to=iec $(stat -c%s "$f") 2>/dev/null || stat -c%s "$f"))"
 done
 LIST_JSON="${LIST_JSON%,}"

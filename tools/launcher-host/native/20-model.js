@@ -56,7 +56,7 @@
         prefs: {
           hiddenApps: [], onlyApps: [], customNames: {}, lastUsed: null,
           autoSwitch: false, recentOrder: true, recent: {}, favorites: [],
-          idleMinutes: 0, groups: []
+          idleMinutes: 0, groups: [], dvd: true
         }
       };
     },
@@ -72,7 +72,8 @@
           recent: kit.readPref("alvidaa_recent", {}),
           favorites: kit.readPref("alvidaa_favorites", []),
           idleMinutes: Number(kit.readPref("alvidaa_idle_minutes", 0)) || 0,
-          groups: kit.readPref("alvidaa_groups", [])
+          groups: kit.readPref("alvidaa_groups", []),
+          dvd: kit.isTruthy(kit.readPref("alvidaa_dvd", true))
         };
         if (this._lastData && this._lastData.apps) {
           this.apps = this.sortRecent(this.filterApps(this._lastData.apps));
@@ -375,7 +376,14 @@
         // the screensaver, or an active edit session is up.
         if (this.zen || this.railOpen || this.idle || this.edit ||
             this.overlay || this.settings) return;
-        if (this.zenAt && nowMs - this.zenAt >= kit.ZEN_MS) this.zen = true;
+        if (this.zenAt && nowMs - this.zenAt >= kit.ZEN_MS) {
+          this.zen = true;
+          kit.zenDark = null;
+          // DVD bounce: ten seconds after zen paints, the clock
+          // block starts riding the screen (module 37). No-op when
+          // the setting is off.
+          if (kit.dvdStart) kit.dvdStart(this);
+        }
       },
       clamp: function () {
         var favLen = this.favoriteItems().length;

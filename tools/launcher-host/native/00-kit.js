@@ -313,6 +313,34 @@
       ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.75)";
   };
 
+  // Manifest tile luminance (module 36 publishes the array): 16 cols
+  // x 9 rows of average luma, row-major — the grid mirrors the stage
+  // after the cover-crop, so tile (c,r) is the screen rect (c*120,
+  // r*120,120,120). Zen ink is chosen from the tiles the block
+  // actually covers; hysteresis (140/116 around 128) keeps a bouncing
+  // block from flickering at a boundary. kit.zenDark carries the last
+  // decision across renders; zenTick resets it. Null array (baked art
+  // or old manifest) -> null, caller keeps the canvas-sampled zenInk.
+  kit.zenDark = null;
+  kit.inkForRect = function (lum, x, y, w, hgt) {
+    if (!lum || lum.length !== 144) return null;
+    var c0 = Math.max(0, Math.floor(x / 120));
+    var c1 = Math.min(15, Math.floor((x + w) / 120));
+    var r0 = Math.max(0, Math.floor(y / 120));
+    var r1 = Math.min(8, Math.floor((y + hgt) / 120));
+    var sum = 0, n = 0, r, c;
+    for (r = r0; r <= r1; r++)
+      for (c = c0; c <= c1; c++) { sum += lum[r * 16 + c]; n++; }
+    var avg = sum / n;
+    // From white, flip to black only at avg>=140; from black, flip
+    // back only below avg>=116. Both sides carry the same 116 floor,
+    // so between 116..140 the current decision simply holds.
+    var want = kit.zenDark === null ? avg >= 128
+      : (kit.zenDark ? avg >= 116 : avg >= 140);
+    kit.zenDark = want;
+    return want ? "#000000" : "#ffffff";
+  };
+
   // Sample the wallpaper where the clock and date sit. The image is
   // painted cover/center on the 1920x1080 stage, so the stage rect
   // is mapped back through the same cover math into image pixels.

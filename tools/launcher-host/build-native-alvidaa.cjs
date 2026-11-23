@@ -24,6 +24,7 @@ const BASE_PARTS = [
   'native/32-settings.js',
   'native/34-keys.js',
   'native/36-wallpaper.js',
+  'native/37-dvd.js',
   'native/40-paint.js',
   'native/50-pages.js',
   'native/60-layers.js',

@@ -17,6 +17,7 @@ const assert = require('node:assert/strict');
 const PARTS = [
   'native/00-kit.js', 'native/10-glyphs.js', 'native/20-model.js',
   'native/30-lifecycle.js', 'native/32-settings.js', 'native/34-keys.js',
+  'native/37-dvd.js',
   'native/40-paint.js', 'native/50-pages.js', 'native/60-layers.js',
   'native/80-component.js'
 ];
@@ -415,10 +416,13 @@ assert.equal(calls.length, n, 'wake key must not activate');
 // Render every layer through a fake h and sanity-check the tree.
 const styleSink = [];
 const tagSink = [];
+const posSink = [];
 function fakeH(tag, data, children) {
   tagSink.push(String(tag));
   if (data && data.style) {
     for (var fk in data.style) styleSink.push(String(data.style[fk]));
+    var pl = parseFloat(data.style.left), pt = parseFloat(data.style.top);
+    if (!isNaN(pl) && !isNaN(pt)) posSink.push([pl, pt]);
   }
   const node = { tag, style: data && data.style };
   node.count = 1 + (Array.isArray(children) ? children.reduce((a, c) => a + (c && c.count ? c.count : 0), 0) : 0);
@@ -565,6 +569,69 @@ v.railOpen = true; v.openLid(); v.closeLid(); v.edit = true;
 v.zenTick(Date.now() + 9000);
 assert.equal(v.zen, false, 'an edit session never fades to zen');
 v.edit = false;
+
+// DVD bounce (module 37, owner 2026-11-23): ten seconds after zen,
+// the clock+date block — the only elements zen carries — rides the
+// screen like the DVD logo. zenTick arms it; zen settings flip it.
+const dvd = kitK.dvd;
+assert.ok(typeof kitK.dvdStart === 'function', 'dvd engine loads with the bundle');
+assert.equal(v.prefs.dvd, true, 'bounce on by default');
+v.railOpen = true; v.closeLid();
+v.zenTick(Date.now() + 9000);
+assert.equal(v.zen, true, 'zen engaged for the bounce test');
+assert.equal(dvd.vm, v, 'zenTick arms the dvd engine');
+kitK.dvdStop();
+assert.equal(dvd.active, false, 'stop clears the pending arm');
+// A paint primes the block box from the renderer (measure side).
+v.zen = true;
+opts.render.call(v, fakeH);
+assert.ok(dvd.w > 300 && dvd.h > 100, 'renderer measures the zen block');
+assert.equal(dvd.ry, 24, 'rest slot published for a jump-free arm');
+// Ride: with the engine active the pair follows x/y, not the slot.
+// Tile luma: left half of the art dark, right half bright.
+dvd.active = true; dvd.x = 100; dvd.y = 50;
+const lumGrid = [];
+for (let gr = 0; gr < 9; gr++)
+  for (let gc = 0; gc < 16; gc++) lumGrid.push(gc < 8 ? 10 : 245);
+sandbox.AlvidaaNativeWallpaperLum = lumGrid;
+kitK.zenDark = null;
+posSink.length = 0;
+styleSink.length = 0;
+opts.render.call(v, fakeH);
+assert.ok(styleSink.includes('rgba(0,0,0,0.75)'),
+  'dark art under the block keeps white ink with a dark halo');
+dvd.x = 1400;
+styleSink.length = 0;
+opts.render.call(v, fakeH);
+assert.ok(styleSink.includes('rgba(255,255,255,0.75)'),
+  'bright art under the block flips the ink to black with a white halo');
+dvd.x = 100;
+styleSink.length = 0;
+opts.render.call(v, fakeH);
+assert.ok(styleSink.includes('rgba(0,0,0,0.75)'),
+  'back on dark art the ink flips again');
+sandbox.AlvidaaNativeWallpaperLum = null;
+posSink.length = 0;
+opts.render.call(v, fakeH);
+dvd.active = false;
+kitK.dvdStop();
+v.zen = false;
+const lit = posSink.filter(p => p[0] > 50);
+assert.ok(lit.length > 50, 'bouncing logo still renders its blocks');
+const minL = Math.min(...lit.map(p => p[0]));
+const minT = Math.min(...lit.map(p => p[1]));
+assert.ok(minL >= 99 && minL <= 101, 'block rides engine x, got ' + minL);
+assert.ok(minT >= 49 && minT <= 51, 'block rides engine y, got ' + minT);
+// Settings: the toggle persists, and off suppresses the next arm.
+v.toggleDvd();
+assert.equal(v.prefs.dvd, false, 'toggle turns bounce off');
+v.railOpen = true; v.closeLid();
+v.zenTick(Date.now() + 9000);
+assert.equal(dvd.vm, v, 'engine still sees the vm when off');
+assert.equal(dvd.arm, null, 'no arm timer while the pref is off');
+v.zen = false;
+v.toggleDvd();
+assert.equal(v.prefs.dvd, true, 'toggle restores bounce');
 
 // YELLOW is a two-way switch for apps mode (owner, 2026-11-22).
 v.overlay = false;

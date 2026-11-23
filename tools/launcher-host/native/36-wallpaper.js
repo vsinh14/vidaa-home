@@ -73,9 +73,18 @@
     if (!entry) {
       self.AlvidaaNativeWallpaper = BAKED;
       self.AlvidaaWallpaperKind = null;
+      self.AlvidaaNativeWallpaperSize = null;
+      self.AlvidaaNativeWallpaperLum = null;
     } else {
       self.AlvidaaNativeWallpaper = BASE + entry.file + "?v=" + (entry.md5 || "");
       self.AlvidaaWallpaperKind = "image";
+      self.AlvidaaNativeWallpaperSize =
+        (entry.w && entry.h) ? [entry.w, entry.h] : null;
+      // 16x9 tile luma (row-major, 0-255) baked by the sync script:
+      // drives kit.inkForRect so zen ink follows the art under the
+      // block without canvas reads on the panel.
+      self.AlvidaaNativeWallpaperLum =
+        entry.lum && entry.lum.length === 144 ? entry.lum : null;
     }
     repaint();
     if (entry && timer !== "off" && activeIds().length > 1) {
