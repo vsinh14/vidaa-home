@@ -120,6 +120,8 @@
     [/peacock/i, "#7f5af0"],
     [/tubi/i, "#00beb2"],
     [/pluto/i, "#1ad7e5"],
+    [/jellyfin/i, "#7b46c9"],   // Jellyfin purple (luma 0.36 -> white ink, stays vivid)
+    [/moonlight/i, "#1a9ba8"],  // Moonlight teal (luma 0.50 -> white ink, stays vivid)
     [/browser/i, "#3b82f6"],
     [/live\s*tv|tv\s*channels/i, "#0093d4"],
     [/settings/i, "#64748b"]
