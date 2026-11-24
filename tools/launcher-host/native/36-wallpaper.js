@@ -102,8 +102,12 @@
   };
 
   // Manifest: a script tag from the bridge — scripts ignore the file://
-  // origin rules that would block XHR. On failure the baked art stands.
-  if (self.document && self.document.createElement && self.document.head) {
+  // origin rules that would block XHR. The launcher and the bridge come up
+  // together at boot; a tag that fires before the bridge is listening used
+  // to leave LIST empty for the whole session (panel-verified 2026-11-25:
+  // "0 wallpapers" in settings until the launcher was restarted), so the
+  // load retries — 5 s, then 15 s steps, four tries, baked art meanwhile.
+  function loadManifest(attempt) {
     var s = self.document.createElement("script");
     s.src = BASE + "wallpapers.js";
     s.onload = function () {
@@ -112,8 +116,17 @@
       }
       apply();
     };
-    s.onerror = function () { apply(); };
+    s.onerror = function () {
+      apply();
+      if (attempt < 3) {
+        setTimeout(function () { loadManifest(attempt + 1); },
+          attempt === 0 ? 5000 : 15000);
+      }
+    };
     self.document.head.appendChild(s);
+  }
+  if (self.document && self.document.createElement && self.document.head) {
+    loadManifest(0);
   }
   apply();
 }(self));

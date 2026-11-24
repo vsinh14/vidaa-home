@@ -23,6 +23,23 @@
         throw e;
       }
     };
+    // Wallpaper chain truth, 6 s after mount (manifest + refresh have run):
+    // manifest script loaded? list populated? sdk installed? which art URL?
+    setTimeout(function () {
+      try {
+        var kit = self.AlvidaaNativeKit;
+        var wp = self.AlvidaaWallpaper;
+        var list = wp && wp.list ? wp.list.length : -1;
+        var sdkS = kit && kit.sdk ? (kit.sdk.storage ? "sdk+storage" : "sdk-nostorage") : "nosdk";
+        var art = String(self.AlvidaaNativeWallpaper || "").slice(0, 60);
+        var pool = "";
+        try { pool = JSON.stringify(wp ? wp.state().pool : null); } catch (e2) { pool = "err"; }
+        self.__DBG.banner("WPDBG manifest=" + (self.AlvidaaWallpaperList ? "yes" : "no") +
+          " list=" + list + " " + sdkS + " pool=" + pool + " art=" + art, "#ffe040");
+      } catch (e) {
+        self.__DBG.banner("WPDBG-ERR " + e.message, "#ff4040");
+      }
+    }, 6000);
     return opts;
   };
   self.__DBG.banner("EVAL-OK HOOK-SET", "#40c0ff");
